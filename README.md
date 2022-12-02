@@ -3,10 +3,15 @@ git clone into workspace src and make
 
 # Usage
 launch the gazebo simulation world
+
+![sim_world](./bin_picking/docs/simulation_world.png)
 ```
 roslaunch bin_picking simulation_binpicking.launch 
 ```
 run pickandplace node (Change process_now variable in code to "process_now = 'sim'")
+
+<img src="./bin_picking/docs/sim_process.png" width=50% height=50%><img src="./bin_picking/docs/crop_and_process.png" width=50% height=50%>
+
 ```
 rosrun bin_picking pickandplace.py
 ```
@@ -47,8 +52,17 @@ rosrun robotiq_2f_gripper_control Robotiq2FGripperSimpleController.py
 ```
 
 # run system
+
+<img src="./bin_picking/docs/calibration_real.png" width=50% height=50%><img src="./bin_picking/docs/test_real_hardware.png" width=50% height=50%>
+
 ```
 rosrun bin_picking RobotOriginCalibration.py
 rosrun bin_picking pickandplace.py
+```
+
+# Model scaning with UR5
+
+```
 rosrun bin_picking arm_model.py 
 ```
+
