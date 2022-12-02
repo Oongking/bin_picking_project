@@ -1,0 +1,60 @@
+<?xml version="1.0"?>
+
+<sdf version="1.5">
+	<world name="default">
+		<!-- A global light source -->
+		<include>
+			<uri>model://sun</uri>
+		</include>
+
+		<!-- A ground plane -->
+		<include>
+			<uri>model://ground_plane</uri>
+		</include>
+
+
+		<!-- Model -->
+		<include>
+			<name>alu_1</name>
+			<uri>model://RightAngleAlu</uri>
+			<pose>0 0 0.7 0 0 -0.2</pose>
+		</include>
+		<include>
+			<name>alu_2</name>
+			<uri>model://RightAngleAlu</uri>
+			<pose>0.1 0.1 0.7 0 0 0.5236</pose>
+		</include>
+		<include>
+			<name>alu_3</name>
+			<uri>model://RightAngleAlu</uri>
+			<pose>0.1 -0.1 0.7 0 0 1.0472</pose>
+		</include>
+		<include>
+			<name>alu_4</name>
+			<uri>model://RightAngleAlu</uri>
+			<pose>-0.1 0.1 0.7 0 0 1.5707</pose>
+		</include>
+		<include>
+			<name>alu_5</name>
+			<uri>model://RightAngleAlu</uri>
+			<pose>-0.1 -0.1 0.7 0 0 2.0943</pose>
+		</include>
+		<include>
+			<name>alu_6</name>
+			<uri>model://RightAngleAlu</uri>
+			<pose>0 0.2 0.7 0 0 2.678</pose>
+		</include>
+		<include>
+			<name>alu_7</name>
+			<uri>model://RightAngleAlu</uri>
+			<pose>0 -0.2 0.7 0 0 1.0472</pose>
+		</include>
+		<gui fullscreen='0'>
+			<camera name='user_camera'>
+				<pose>-1.845639 -2.212910 2.732601 0 0.583641 0.856190</pose>
+				<view_controller>orbit</view_controller>
+				<projection_type>perspective</projection_type>
+			</camera>
+		</gui>
+	</world>
+</sdf>

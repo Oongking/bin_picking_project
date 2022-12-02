@@ -1,0 +1,15 @@
+material test1
+{
+  technique
+  {
+    pass
+    {
+      texture_unit
+      {
+        // Relative to the location of the material script
+        texture test1.png
+        // Repeat the texture over the surface (4 per face)
+      }
+    }
+  }
+}

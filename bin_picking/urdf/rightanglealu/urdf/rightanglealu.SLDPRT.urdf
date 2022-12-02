@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This URDF was automatically created by SolidWorks to URDF Exporter! Originally created by Stephen Brawner (brawner@gmail.com) 
+     Commit Version: 1.5.1-0-g916b5db  Build Version: 1.5.7152.31018
+     For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
+<robot
+  name="rightanglealu.SLDPRT">
+  <link
+    name="rightanglealu.SLDPRT">
+    <inertial>
+      <origin
+        xyz="-6.8878E-18 -0.0053173 0.0053173"
+        rpy="0 0 0" />
+      <mass
+        value="0.010376" />
+      <inertia
+        ixx="7.2733E-07"
+        ixy="1.0603E-21"
+        ixz="-9.5556E-22"
+        iyy="4.6006E-06"
+        iyz="2.1645E-07"
+        izz="4.6006E-06" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="1.5707963267949 0 0" />
+      <geometry>
+        <mesh
+          filename="package://rightanglealu.SLDPRT/meshes/rightanglealu.SLDPRT.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.89804 0.91765 0.92941 1" />
+        <texture
+          filename="package://rightanglealu.SLDPRT/textures/" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="1.5707963267949 0 0" />
+      <geometry>
+        <mesh
+          filename="package://rightanglealu.SLDPRT/meshes/rightanglealu.SLDPRT.STL" />
+      </geometry>
+    </collision>
+  </link>
+</robot>

@@ -1,0 +1,44 @@
+<launch>
+  <!-- Thoranin Oonariya 6201023621026 -->
+  <arg name="model" default="$(env TURTLEBOT3_MODEL)" doc="model type [burger, waffle, waffle_pi]"/>
+  <arg name="x_pos" default="-2.25"/>
+  <arg name="y_pos" default="-0.05"/>
+  <arg name="z_pos" default="0.0"/>
+
+  <include file="$(find turtlebot3_navigation)/launch/turtlebot3_navigation.launch">
+    <arg name="open_rviz" default="true"/>
+    <arg name="move_forward_only" default="true"/>
+  </include>
+
+	<env name="GAZEBO_MODEL_PATH" value="$(find lewansoul_xarm)/models:$(optenv GAZEBO_MODEL_PATH)" /> 
+
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name" value="$(find lewansoul_xarm)/worlds/exam_env.world"/>
+    <arg name="paused" value="false"/>
+    <arg name="use_sim_time" value="true"/>
+    <arg name="gui" value="true"/>
+    <arg name="headless" value="false"/>
+    <arg name="debug" value="false"/>
+  </include>
+
+  <param name="robot_description" command="$(find xacro)/xacro --inorder $(find full_ur_gripper2)/urdf/turtlebot_gripper2.urdf.xacro" />
+
+  <node pkg="gazebo_ros" type="spawn_model" name="spawn_urdf"  args="-urdf -model robot -x $(arg x_pos) -y $(arg y_pos) -z $(arg z_pos) -param robot_description" />
+
+  <include file="$(find turtlebot_gripper2)/launch/move_group.launch">
+    <arg name="allow_trajectory_execution" value="true"/>
+    <arg name="fake_execution" value="false"/>
+    <arg name="info" value="true"/>
+    <arg name="debug" value="false"/>
+    <arg name="load_robot_description" value="false"/>
+  </include>
+
+  <!-- <include file="$(find turtlebot_gripper2)/launch/moveit_rviz.launch">
+    <arg name="rviz_config" value="$(find turtlebot_gripper2)/launch/moveit.rviz"/>
+    <arg name="debug" value="false"/>
+  </include> -->
+
+  <include file="$(find turtlebot_gripper2)/launch/ros_controllers.launch"/>
+
+
+</launch>

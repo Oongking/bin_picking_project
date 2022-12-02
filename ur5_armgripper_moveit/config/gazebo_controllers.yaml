@@ -1,0 +1,13 @@
+# Publish joint_states
+joint_state_controller:
+  type: joint_state_controller/JointStateController
+  publish_rate: 50
+
+
+gazebo_ros_control/pid_gains:
+  shoulder_pan_joint: {p: 10000.0, i: 0.1, d: 10.0}
+  shoulder_lift_joint: {p: 10000.0, i: 0.1, d: 10.0}
+  elbow_joint: {p: 10000.0, i: 0.1, d: 10.0}
+  wrist_1_joint: {p: 10000.0, i: 0.1, d: 10.0}
+  wrist_2_joint: {p: 10000.0, i: 0.1, d: 10.0}
+  wrist_3_joint: {p: 10000.0, i: 0.1, d: 10.0}

@@ -1,0 +1,25 @@
+<launch>
+
+  <arg name="paused" default="false"/>
+  <arg name="gazebo_gui" default="true"/>
+
+  <!-- startup simulated world -->
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name" default="worlds/empty.world"/>
+    <arg name="paused" value="true"/>
+    <arg name="gui" value="$(arg gazebo_gui)"/>
+  </include>
+
+
+
+    <!-- Azure -->
+  <param name="robot_description" command="xacro $(find bin_picking)/urdf/azure_gazebo.urdf.xacro" />
+    <arg name="unpause" value="$(eval '' if arg('paused') else '-unpause')" />
+
+  <node name="robot_state_publisher_azure" pkg="robot_state_publisher" type="robot_state_publisher">
+    <!-- <remap from="robot_description" to="azure_description" /> -->
+  </node>
+  <node name="spawn_azure_model" pkg="gazebo_ros" type="spawn_model" args="-urdf -param robot_description -model azure_cam $(arg unpause)" output="screen" />
+
+
+</launch>
