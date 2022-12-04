@@ -1,6 +1,12 @@
 # bin picking project
 git clone into workspace src and make require universal_robot package for real hardware
 
+Need to add models path into .bashrc file
+```
+export GAZEBO_RESOURCE_PATH=~/RobotArm_ws/src/models:${GAZEBO_RESOURCE_PATH}
+export GAZEBO_MODEL_PATH=~/RobotArm_ws/src/models:${GAZEBO_MODEL_PATH}
+```
+
 # Usage
 launch the gazebo simulation world
 
