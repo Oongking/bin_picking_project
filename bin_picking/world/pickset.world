@@ -90,7 +90,7 @@
           <pose>0 0 -0 1.5708 -0 0</pose>
           <geometry>
             <mesh>
-              <uri>/home/oongking/RobotArm_ws/src/bin_picking/models/RightAngleAlu/stl_files/rightangle.STL</uri>
+              <uri>/home/oongking/RobotArm_ws/src/models/RightAngleAlu/stl_files/rightangle.STL</uri>
               <scale>1 1 1</scale>
             </mesh>
           </geometry>
@@ -117,7 +117,7 @@
           <pose>0 0 -0 1.5708 -0 0</pose>
           <geometry>
             <mesh>
-              <uri>/home/oongking/RobotArm_ws/src/bin_picking/models/RightAngleAlu/stl_files/rightangle.STL</uri>
+              <uri>/home/oongking/RobotArm_ws/src/models/RightAngleAlu/stl_files/rightangle.STL</uri>
               <scale>1 1 1</scale>
             </mesh>
           </geometry>
@@ -198,7 +198,7 @@
           <pose>0 0 -0 1.5708 -0 0</pose>
           <geometry>
             <mesh>
-              <uri>/home/oongking/RobotArm_ws/src/bin_picking/models/RightAngleAlu/stl_files/rightangle.STL</uri>
+              <uri>/home/oongking/RobotArm_ws/src/models/RightAngleAlu/stl_files/rightangle.STL</uri>
               <scale>1 1 1</scale>
             </mesh>
           </geometry>
@@ -225,7 +225,7 @@
           <pose>0 0 -0 1.5708 -0 0</pose>
           <geometry>
             <mesh>
-              <uri>/home/oongking/RobotArm_ws/src/bin_picking/models/RightAngleAlu/stl_files/rightangle.STL</uri>
+              <uri>/home/oongking/RobotArm_ws/src/models/RightAngleAlu/stl_files/rightangle.STL</uri>
               <scale>1 1 1</scale>
             </mesh>
           </geometry>
@@ -306,7 +306,7 @@
           <pose>0 0 -0 1.5708 -0 0</pose>
           <geometry>
             <mesh>
-              <uri>/home/oongking/RobotArm_ws/src/bin_picking/models/RightAngleAlu/stl_files/rightangle.STL</uri>
+              <uri>/home/oongking/RobotArm_ws/src/models/RightAngleAlu/stl_files/rightangle.STL</uri>
               <scale>1 1 1</scale>
             </mesh>
           </geometry>
@@ -333,7 +333,7 @@
           <pose>0 0 -0 1.5708 -0 0</pose>
           <geometry>
             <mesh>
-              <uri>/home/oongking/RobotArm_ws/src/bin_picking/models/RightAngleAlu/stl_files/rightangle.STL</uri>
+              <uri>/home/oongking/RobotArm_ws/src/models/RightAngleAlu/stl_files/rightangle.STL</uri>
               <scale>1 1 1</scale>
             </mesh>
           </geometry>
@@ -414,7 +414,7 @@
           <pose>0 0 -0 1.5708 -0 0</pose>
           <geometry>
             <mesh>
-              <uri>/home/oongking/RobotArm_ws/src/bin_picking/models/RightAngleAlu/stl_files/rightangle.STL</uri>
+              <uri>/home/oongking/RobotArm_ws/src/models/RightAngleAlu/stl_files/rightangle.STL</uri>
               <scale>1 1 1</scale>
             </mesh>
           </geometry>
@@ -441,7 +441,7 @@
           <pose>0 0 -0 1.5708 -0 0</pose>
           <geometry>
             <mesh>
-              <uri>/home/oongking/RobotArm_ws/src/bin_picking/models/RightAngleAlu/stl_files/rightangle.STL</uri>
+              <uri>/home/oongking/RobotArm_ws/src/models/RightAngleAlu/stl_files/rightangle.STL</uri>
               <scale>1 1 1</scale>
             </mesh>
           </geometry>
@@ -522,7 +522,7 @@
           <pose>0 0 -0 1.5708 -0 0</pose>
           <geometry>
             <mesh>
-              <uri>/home/oongking/RobotArm_ws/src/bin_picking/models/RightAngleAlu/stl_files/rightangle.STL</uri>
+              <uri>/home/oongking/RobotArm_ws/src/models/RightAngleAlu/stl_files/rightangle.STL</uri>
               <scale>1 1 1</scale>
             </mesh>
           </geometry>
@@ -549,7 +549,7 @@
           <pose>0 0 -0 1.5708 -0 0</pose>
           <geometry>
             <mesh>
-              <uri>/home/oongking/RobotArm_ws/src/bin_picking/models/RightAngleAlu/stl_files/rightangle.STL</uri>
+              <uri>/home/oongking/RobotArm_ws/src/models/RightAngleAlu/stl_files/rightangle.STL</uri>
               <scale>1 1 1</scale>
             </mesh>
           </geometry>
@@ -630,7 +630,7 @@
           <pose>0 0 -0 1.5708 -0 0</pose>
           <geometry>
             <mesh>
-              <uri>/home/oongking/RobotArm_ws/src/bin_picking/models/RightAngleAlu/stl_files/rightangle.STL</uri>
+              <uri>/home/oongking/RobotArm_ws/src/models/RightAngleAlu/stl_files/rightangle.STL</uri>
               <scale>1 1 1</scale>
             </mesh>
           </geometry>
@@ -657,7 +657,7 @@
           <pose>0 0 -0 1.5708 -0 0</pose>
           <geometry>
             <mesh>
-              <uri>/home/oongking/RobotArm_ws/src/bin_picking/models/RightAngleAlu/stl_files/rightangle.STL</uri>
+              <uri>/home/oongking/RobotArm_ws/src/models/RightAngleAlu/stl_files/rightangle.STL</uri>
               <scale>1 1 1</scale>
             </mesh>
           </geometry>
