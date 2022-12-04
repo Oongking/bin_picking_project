@@ -1,5 +1,5 @@
 # bin picking project
-git clone into workspace src and make
+git clone into workspace src and make require universal_robot package for real hardware
 
 # Usage
 launch the gazebo simulation world
