@@ -1,0 +1,18 @@
+<launch>
+
+  <!-- Robot Arm -->
+  <include file="$(find ur_modern_driver)/launch/ur5_robotiq85_bringup.launch">
+    <arg name="robot_ip" value="192.168.0.100" />
+  </include>
+  <include file="$(find ur5_armgripper_hardware)/launch/move_group.launch"/>
+  <include file="$(find ur5_armgripper_hardware)/launch/moveit_rviz.launch"/>
+
+  <!-- Gripper -->
+  <node name="Robotiq2FGripperRtuNode" pkg="robotiq_2f_gripper_control" type="Robotiq2FGripperRtuNode.py" args="/dev/ttyUSB0" />
+
+  <!-- Camera -->
+  <include file="$(find bin_picking)/launch/zivid_run.launch"/>
+
+
+  
+</launch>
