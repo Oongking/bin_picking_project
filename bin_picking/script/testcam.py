@@ -66,12 +66,11 @@ while not rospy.is_shutdown():
 
     if key == 't':
         pcd,rgb_image, depth_image,make_pcd = cam.testMatrix()
-        cv2.imwrite("/home/oongking/RobotArm_ws/src/bin_picking/script/test/testMatrix/rgb_img.png",rgb_image)
-        cv2.imwrite("/home/oongking/RobotArm_ws/src/bin_picking/script/test/testMatrix/dep_img.png",depth_image)
-        o3d.io.write_point_cloud("/home/oongking/RobotArm_ws/src/bin_picking/script/test/testMatrix/pcd_ros.pcd", pcd)
-        o3d.io.write_point_cloud("/home/oongking/RobotArm_ws/src/bin_picking/script/test/testMatrix/make_pcd.pcd", make_pcd)
-
-
+        config = "eraser_shampoo_3"
+        cv2.imwrite(f"/home/oongking/RobotArm_ws/src/bin_picking/script/test/overlap_dataset/{config}/{config}_rgb_img.png",rgb_image)
+        cv2.imwrite(f"/home/oongking/RobotArm_ws/src/bin_picking/script/test/overlap_dataset/{config}/{config}_dep_img.png",depth_image)
+        o3d.io.write_point_cloud(f"/home/oongking/RobotArm_ws/src/bin_picking/script/test/overlap_dataset/{config}/{config}_pcd_ros.pcd", pcd)
+        o3d.io.write_point_cloud(f"/home/oongking/RobotArm_ws/src/bin_picking/script/test/overlap_dataset/{config}/{config}_make_pcd.pcd", make_pcd)
 
     if key == 'p':
         make_pcd,rgb_image, depth_image = cam.buildPCD()
