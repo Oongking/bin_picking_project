@@ -711,7 +711,7 @@ def obj_pose_estimate(pcd_model,pcds,point_p_obj = 4000):
                 # o3d.visualization.draw_geometries([ws_coor,pcdcen])
                 obj_cluster.append(pcdcen)
 
-            draw_labels_on_model(pcd,labels)
+            # draw_labels_on_model(pcd,labels)
     
     obj_tf = []
     fitnesses = []
@@ -723,7 +723,7 @@ def obj_pose_estimate(pcd_model,pcds,point_p_obj = 4000):
             fitnesses.append(fitness)
             obj_tf.append(tfm)
 
-        draw_registration_result(pcd_model, obj, tfm)
+        # draw_registration_result(pcd_model, obj, tfm)
 
     fitnesses, obj_tf = zip(*sorted(zip(fitnesses, obj_tf),reverse=True))
     fitnesses = list(fitnesses)

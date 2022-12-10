@@ -8,8 +8,8 @@ import numpy as np
 from utils import *
 import threading
 
-# pcd_model = o3d.io.read_point_cloud("/home/oongking/RobotArm_ws/src/model3d/script/buildModel/Data/eraser/eraser.pcd")
-pcd_model = o3d.io.read_point_cloud("/home/oongking/RobotArm_ws/src/model3d/script/buildModel/Data/shampoo/shampoo.pcd")
+pcd_model_eraser = o3d.io.read_point_cloud("/home/oongking/RobotArm_ws/src/model3d/script/buildModel/Data/eraser/eraser.pcd")
+pcd_model_shampoo = o3d.io.read_point_cloud("/home/oongking/RobotArm_ws/src/model3d/script/buildModel/Data/shampoo/shampoo.pcd")
 
 # pcd_env = o3d.io.read_point_cloud("/home/oongking/RobotArm_ws/src/bin_picking/script/test/overlap_dataset/eraser_2/eraser_2_make_pcd.pcd")
 # pcd_env = o3d.io.read_point_cloud("/home/oongking/RobotArm_ws/src/bin_picking/script/test/overlap_dataset/shampoo_1/shampoo_1_make_pcd.pcd")
@@ -25,7 +25,7 @@ ws_coor.rotate(ws_tf[:3, :3],(0,0,0))
 ws_coor.translate(np.asarray(ws_tf[:3,3],dtype=np.float64),relative=True)
 
 
-o3d.visualization.draw_geometries([ws_coor,Realcoor,pcd_env,ws_box,pcd_model])
+o3d.visualization.draw_geometries([ws_coor,Realcoor,pcd_env,ws_box])
 
 group_model = pcd_env.crop(ws_box)
 group_model = group_model.voxel_down_sample(voxel_size=0.001)
@@ -55,7 +55,7 @@ def obj_pose_estimate(pcd_model,pcds,point_p_obj = 4000):
                 # o3d.visualization.draw_geometries([ws_coor,pcdcen])
                 obj_cluster.append(pcdcen)
 
-            draw_labels_on_model(pcd,labels)
+            # draw_labels_on_model(pcd,labels)
     
     obj_tf = []
     fitnesses = []
@@ -67,7 +67,7 @@ def obj_pose_estimate(pcd_model,pcds,point_p_obj = 4000):
             fitnesses.append(fitness)
             obj_tf.append(tfm)
 
-        draw_registration_result(pcd_model, obj, tfm)
+        # draw_registration_result(pcd_model, obj, tfm)
 
     fitnesses, obj_tf = zip(*sorted(zip(fitnesses, obj_tf),reverse=True))
     fitnesses = list(fitnesses)
@@ -85,8 +85,11 @@ def coordinates(TFMs):
     return coors
 
             
-obj_tf,fitnesses = obj_pose_estimate(pcd_model,pcds,point_p_obj = 4000)
-obj_coor = coordinates(obj_tf)
+obj_tf,fitnesses = obj_pose_estimate(pcd_model_shampoo,pcds,point_p_obj = 4000)
+shampoo_coor = coordinates(obj_tf)
+
+obj_tf,fitnesses = obj_pose_estimate(pcd_model_eraser,pcds,point_p_obj = 800)
+eraser_coor = coordinates(obj_tf)
 
 # xyz = np.asarray(pcds[0].points)
 
@@ -123,7 +126,7 @@ obj_coor = coordinates(obj_tf)
 # fitnesses = list(fitnesses)
 # obj_coor = list(obj_coor)
 
-o3d.visualization.draw_geometries([ws_coor,Realcoor,pcd_env,ws_box,pcd_model]+obj_coor)
+o3d.visualization.draw_geometries([ws_coor,Realcoor,pcd_env,ws_box]+shampoo_coor+eraser_coor)
 
 
 
