@@ -34,19 +34,19 @@ moveit_commander.roscpp_initialize(sys.argv)
 robot = moveit_commander.RobotCommander()
 scene = moveit_commander.PlanningSceneInterface()
 
-# process_now = 'sim'
-process_now = 'zivid'
-# process_now = 'azure'
+# cam_type = 'sim'
+cam_type = 'zivid'
+# cam_type = 'azure'
 
 # Setup ROS Node
 rospy.init_node("PickAndPlace", anonymous=True)
-if process_now  !='sim':
+if cam_type  !='sim':
     pub = rospy.Publisher('Robotiq2FGripperRobotOutput', outputMsg.Robotiq2FGripper_robot_output)
 
 rate = rospy.Rate(10) # 10hz
 
 # Sim or Real
-if process_now =='sim':
+if cam_type =='sim':
     control_speed = 1
 else:
     control_speed = 0.5
@@ -72,7 +72,7 @@ display_trajectory_publisher = rospy.Publisher(
     )
 
 # GRIPPER
-if process_now =='sim':
+if cam_type =='sim':
     group_name = "gripper"
     group_gripper = moveit_commander.MoveGroupCommander(group_name)
     group_gripper.set_max_velocity_scaling_factor(control_speed)
@@ -171,20 +171,20 @@ else:
 D2R = np.pi/180
 R2D = 180/np.pi
 
-if process_now == 'sim':
+if cam_type == 'sim':
     cam = sim_cam(get_depth = False)
-elif process_now == 'zivid':
+elif cam_type == 'zivid':
     cam = zivid_cam()
-elif process_now == 'azure':
+elif cam_type == 'azure':
     cam = Azure_cam()
 
 class Arm_model:
     def __init__(self):
         
         rospy.loginfo(":: Starting RobotPose ::")
-        if process_now == 'sim':
+        if cam_type == 'sim':
             self.Robotpose = np.loadtxt('/home/oongking/RobotArm_ws/src/bin_picking/script/simRobotpose.txt',delimiter=',')
-        elif process_now == 'zivid' or process_now == 'azure':
+        elif cam_type == 'zivid' or cam_type == 'azure':
             self.Robotpose = np.loadtxt('/home/oongking/RobotArm_ws/src/bin_picking/script/realRobotpose.txt',delimiter=',')
 
         self.pcd_merged = o3d.geometry.PointCloud()
@@ -211,7 +211,7 @@ class Arm_model:
 
         self.cam_box_tf = np.matmul(self.Robotpose,cam_box)
 
-        if process_now == 'sim':
+        if cam_type == 'sim':
             x_offset = 0.003
         else:
             x_offset = -0.03
@@ -266,7 +266,7 @@ class Arm_model:
         rate.sleep()
     
     def common_Gripper(self,pose):
-        if process_now == 'sim':
+        if cam_type == 'sim':
             print(pose)
             joint_goal = group_gripper.get_current_joint_values()
             joint_goal[0] = self.MotionPlan[pose][0]
@@ -390,11 +390,11 @@ def fixbox(rot,trans,x_offset) :
 
 
 
-if process_now == 'sim':
+if cam_type == 'sim':
     cam = sim_cam(get_depth = False)
-elif process_now == 'zivid':
+elif cam_type == 'zivid':
     cam = zivid_cam()
-elif process_now == 'azure':
+elif cam_type == 'azure':
     cam = Azure_cam()
 
 
@@ -414,9 +414,9 @@ while not rospy.is_shutdown():
         Realcoor = o3d.geometry.TriangleMesh.create_coordinate_frame(0.05,(0,0,0))
         RobotBaseCoor = o3d.geometry.TriangleMesh.create_coordinate_frame(0.1,(0,0,0))
         endeffCoor = o3d.geometry.TriangleMesh.create_coordinate_frame(0.1,(0,0,0))
-        if process_now != 'zivid':
+        if cam_type != 'zivid':
             pcd = cam.buildPCD()
-        elif process_now == 'zivid':
+        elif cam_type == 'zivid':
             # rgb_image, depth_image, pcd = cam.capture()
             pcd = cam.buildPCD()
 

@@ -6,6 +6,7 @@ from tf.transformations import *
 # Utility
 import numpy as np
 import copy
+from matplotlib import pyplot as plt
 
 # msg & convert
 from cv_bridge import CvBridge, CvBridgeError
@@ -58,6 +59,7 @@ azure_matrix_coefficients = np.array([  [610.89826648,   0.,         647.1639891
 azure_distortion_coefficients = np.array([[ 0.09865886, -0.11209954, -0.00087517,  0.00436045,  0.06666987]])
 azure_intrinsic = o3d.camera.PinholeCameraIntrinsic(1280, 720, 610.89826648, 616.12187414, 647.16398913, 366.37689302)
 
+sim_intrinsic = o3d.camera.PinholeCameraIntrinsic(1280, 720, 1024.249107649826, 1024.249107649826, 640.5, 360.5)
 
 def normalvector(base, cross1, cross2):
     vector1 = np.asarray(np.subtract(cross1,base),dtype = np.float64)
@@ -467,7 +469,7 @@ class sim_cam():
         self.pcd = None
         self.rgb_image = None
         self.depth_image = None
-        self.sim_intrinsic = o3d.camera.PinholeCameraIntrinsic(1280, 720, 1024.249107649826, 1024.249107649826, 640.5, 360.5)
+        
 
     def get_pcd(self):
 
@@ -499,7 +501,7 @@ class sim_cam():
         depth = o3d.geometry.Image(self.depth_image)
         color = o3d.geometry.Image(cv2.cvtColor(self.rgb_image, cv2.COLOR_BGR2RGB))
         rgbd = o3d.geometry.RGBDImage.create_from_color_and_depth(color, depth, depth_scale=1.0, depth_trunc=100.0, convert_rgb_to_intensity=False)
-        pcd = o3d.geometry.PointCloud.create_from_rgbd_image(rgbd, self.sim_intrinsic)
+        pcd = o3d.geometry.PointCloud.create_from_rgbd_image(rgbd, sim_intrinsic)
         # downpcd = pcd.voxel_down_sample(voxel_size=0.01)
         # o3d.visualization.draw_geometries([downpcd,Realcoor])
         # return downpcd
@@ -570,3 +572,335 @@ class sim_cam():
         else:
             return None
 
+""" ######################################################################################### """
+# Function
+def resize(img,scale_percent):
+    # scale_percent = 50 # percent of original size
+    width = int(img.shape[1] * scale_percent / 100)
+    height = int(img.shape[0] * scale_percent / 100)
+    dim = (width, height)
+    
+        # resize image
+    resized = cv2.resize(img, dim, interpolation = cv2.INTER_AREA)
+    return resized
+
+def buildPCD(rgb_image,depth_image, camera = 'zivid'):
+
+    depth = o3d.geometry.Image(depth_image)
+    color = o3d.geometry.Image(cv2.cvtColor(rgb_image, cv2.COLOR_BGR2RGB))
+    rgbd = o3d.geometry.RGBDImage.create_from_color_and_depth(color, depth, depth_scale=1.0, depth_trunc=100.0, convert_rgb_to_intensity=False)
+    if camera == 'zivid':
+        pcd = o3d.geometry.PointCloud.create_from_rgbd_image(rgbd, zivid_intrinsic)
+    if camera == 'sim':
+        pcd = o3d.geometry.PointCloud.create_from_rgbd_image(rgbd, sim_intrinsic)
+    if camera == 'azure':
+        pcd = o3d.geometry.PointCloud.create_from_rgbd_image(rgbd, azure_intrinsic)
+
+    return pcd
+
+def depfromcolor(mask,depth_image):
+    _,alpha = cv2.threshold(mask,0,255,cv2.THRESH_BINARY)
+    alpha[alpha == 255] = 1
+    depth_image = depth_image*alpha
+    return depth_image
+
+def fixbox(rot,trans,z_offset,x = 0.4,y = 0.6 ,z = 0.1) :
+    # Before rotate to canon
+    
+    fix_box = np.array([
+    [-x/2,-y/2,z_offset],
+    [-x/2, y/2,z_offset],
+    [x/2, y/2,z_offset],
+    [x/2,-y/2,z_offset],
+
+    [-x/2,-y/2,z+z_offset],
+    [-x/2, y/2,z+z_offset],
+    [x/2,-y/2,z+z_offset],
+    [x/2, y/2,z+z_offset]
+    ])
+
+    fixbox = o3d.geometry.OrientedBoundingBox.create_from_points(o3d.utility.Vector3dVector(fix_box))
+    fixbox.rotate(rot,(0,0,0))
+    fixbox.translate(np.asarray(trans,dtype=np.float64),relative=True)
+    fixbox.color = (0, 0, 0)
+
+    return fixbox 
+
+def Cluster(pcd, Clus_eps=0.01, Clus_min_points=20, Out_nb_neighbors = 20, Out_std_ratio = 1.0, point_upper_limit = 50000, point_lower_limit = 700, obj_size = 0.2):
+    pcds = []
+    volume = []
+    labels = np.array(pcd.cluster_dbscan(eps = Clus_eps, min_points = Clus_min_points, print_progress=False))
+    
+    max_label = labels.max()
+    for i in range(0,max_label+1):
+        pcdcen = pcd.select_by_index(np.argwhere(labels==i))
+        pcdcen, ind = pcdcen.remove_statistical_outlier(nb_neighbors = Out_nb_neighbors,
+                                                    std_ratio = Out_std_ratio)
+        # print("pcdcen : ",np.asarray(pcdcen.points).shape)
+        
+        if point_upper_limit >np.asarray(pcdcen.points).shape[0]>point_lower_limit and np.linalg.norm(pcdcen.get_max_bound()-pcdcen.get_min_bound()) < obj_size:
+            # o3d.visualization.draw_geometries([pcdcen])
+            box = pcdcen.get_oriented_bounding_box()
+            volume.append(box.volume())
+            pcdcen.estimate_normals()
+            pcds.append(pcdcen)
+    volume, pcds = zip(*sorted(zip(volume, pcds),reverse=True))
+    volume = list(volume)
+    pcds = list(pcds)
+
+    return volume,pcds
+
+def workspace_ar_set(rgb_image, camera = 'zivid', show = False):
+    if camera == 'zivid':
+        boardA3 = zivid_boardA3
+        matrix_coefficients = zivid_matrix_coefficients
+        distortion_coefficients = zivid_distortion_coefficients
+        offset_x = A3_zivid_offset_x
+        offset_y = A3_zivid_offset_y
+    if camera == 'azure':
+        boardA3 = azure_boardA3
+        matrix_coefficients = azure_matrix_coefficients
+        distortion_coefficients = azure_distortion_coefficients
+        offset_x = A3_azure_offset_x
+        offset_y = A3_azure_offset_y
+
+    rvec=None
+    tvec=None
+    (corners, ids,rejected)= cv2.aruco.detectMarkers(rgb_image,arucoDictA3,parameters= arucoParams)
+
+    if len(corners) > 0:
+        cv2.aruco.drawDetectedMarkers(rgb_image,corners,ids)
+        _,rvec,tvec = cv2.aruco.estimatePoseBoard( corners, ids, boardA3, matrix_coefficients, distortion_coefficients,rvec,tvec)
+
+    transformation_matrix = np.eye(4,dtype=float)
+    transformation_matrix[:3, :3], _ = cv2.Rodrigues(rvec)
+    q= tf.transformations.quaternion_from_matrix(transformation_matrix)
+
+    vec= [offset_x,offset_y,0,0]
+    global_offset=quaternion_multiply(quaternion_multiply(q, vec),quaternion_conjugate(q))
+
+    tvec[0]=tvec[0]+global_offset[0]
+    tvec[1]=tvec[1]+global_offset[1]
+    tvec[2]=tvec[2]+global_offset[2]
+    transformation_matrix[ :3, 3] = np.asarray(tvec).transpose()
+
+    if show:
+        if rvec is not None and tvec is not None:
+            cv2.aruco.drawAxis( rgb_image, matrix_coefficients, distortion_coefficients, rvec, tvec, 0.08 )
+        while True:
+            cv2.imshow("Original Image",rgb_image)
+            if cv2.waitKey(1) & 0xFF==ord('q'):
+                break
+    
+    return transformation_matrix
+
+def obj_pose_estimate(pcd_model,pcds,point_p_obj = 4000):
+    obj_cluster = []
+    for pcd in pcds:
+        num_obj = np.trunc(len(pcd.points)/point_p_obj).astype(int)
+        if num_obj > 0:
+            xyz = np.asarray(pcd.points)
+
+            clf = Kmeans(k = num_obj,tolerance=0.0001)
+            labels = clf.predict(xyz)
+
+            max_label = labels.max()
+            
+            for i in range(0,max_label+1):
+                pcdcen = pcd.select_by_index(np.argwhere(labels==i))
+                # o3d.visualization.draw_geometries([ws_coor,pcdcen])
+                obj_cluster.append(pcdcen)
+
+            draw_labels_on_model(pcd,labels)
+    
+    obj_tf = []
+    fitnesses = []
+    for obj in obj_cluster:
+        icp = icp_pose_estimate(pcd_model,obj,t_down= False)
+        tfm,fitness = icp.estimate()
+        
+        if fitness > 0.38:
+            fitnesses.append(fitness)
+            obj_tf.append(tfm)
+
+        draw_registration_result(pcd_model, obj, tfm)
+
+    fitnesses, obj_tf = zip(*sorted(zip(fitnesses, obj_tf),reverse=True))
+    fitnesses = list(fitnesses)
+    obj_tf = list(obj_tf)
+
+    return obj_tf,fitnesses
+
+def coordinates(TFMs):
+    coors = []
+    for tf in TFMs:
+        coor = o3d.geometry.TriangleMesh.create_coordinate_frame(0.05,[0,0,0])
+        coor.rotate(tf[:3, :3],(0,0,0))
+        coor.translate(np.asarray(tf[:3,3],dtype=np.float64),relative=True)
+        coors.append(coor)
+    return coors
+
+""" ######################################################################################### """
+# K-mean
+
+def draw_labels_on_model(pcl,labels):
+    cmap = plt.get_cmap("tab20")
+    pcl_temp = copy.deepcopy(pcl)
+    max_label = labels.max()
+    colors = cmap(labels / (max_label if max_label > 0 else 1))
+    pcl_temp.colors = o3d.utility.Vector3dVector(colors[:,:3])
+    o3d.visualization.draw_geometries([pcl_temp])
+
+def euclidean_distance(one_sample,X):
+    #transfer one_sample into 1D vector
+    one_sample = one_sample.reshape(1,-1)
+    #transfer X into 1D vector
+    X = X.reshape(X.shape[0],-1)
+    #this is used to make sure one_sample's dimension is same as X
+    distances = np.power(np.tile(one_sample,(X.shape[0],1))-X,2).sum(axis=1)
+    return distances
+
+class Kmeans():
+    #constructor
+    def __init__(self,k=2,max_iterations=1500,tolerance=0.00001):
+        self.k = k
+        self.max_iterations = max_iterations
+        self.tolerance = tolerance
+    
+    #randomly select k centroids
+    def init_random_centroids(self,X):
+        #save the shape of X
+        n_samples, n_features = np.shape(X)
+        #make a zero matrix to store values
+        centroids = np.zeros((self.k,n_features))
+        #bcs there is k centroids, so we loop k tiems
+        for i in range(self.k):
+            #selecting values under the range radomly
+            centroid = X[np.random.choice(range(n_samples))]
+            centroids[i] = centroid
+        return centroids
+
+    #find the closest centroid of a sample
+    def closest_centroid(self,sample,centroids):
+        distances = euclidean_distance(sample,centroids)
+        #np.argmin return the indices of the minimum of distances
+        closest_i = np.argmin(distances)
+        return closest_i
+
+    #determine the clusers
+    def create_clusters(self,centroids,X):
+        n_samples = np.shape(X)[0]
+        #This is to construct the nested list for storing clusters
+        clusters = [[] for _ in range(self.k)]
+        for sample_i, sample in enumerate(X):
+            centroid_i = self.closest_centroid(sample,centroids)
+            clusters[centroid_i].append(sample_i)
+        return clusters
+
+    #update the centroids based on mean algorithm
+    def update_centroids(self,clusters,X):
+        n_features = np.shape(X)[1]
+        centroids = np.zeros((self.k,n_features))
+        for i, cluster in enumerate(clusters):
+            centroid = np.mean(X[cluster],axis=0)
+            centroids[i] = centroid
+        return centroids
+
+    #obtain the labels
+    #same cluster, same y_pred value
+    def get_cluster_labels(self,clusters,X):
+        y_pred = np.zeros(np.shape(X)[0])
+        for cluster_i, cluster in enumerate(clusters):
+            for sample_i in cluster:
+                y_pred[sample_i] = cluster_i
+        return np.array(y_pred,dtype=np.int64)
+
+    #predict the labels
+    def predict(self,X):
+        #selecting the centroids randomly
+        centroids = self.init_random_centroids(X)
+
+        for _ in range(self.max_iterations):
+            #clustering all the data point
+            clusters = self.create_clusters(centroids,X)
+            former_centroids = centroids
+            #calculate new cluster center
+            centroids = self.update_centroids(clusters,X)
+            #judge the current difference if it meets convergence  
+            diff = centroids - former_centroids
+            if diff.any() < self.tolerance:
+                break
+            
+        return self.get_cluster_labels(clusters,X) 
+
+
+
+""" ######################################################################################### """
+# ICP
+
+class icp_pose_estimate:
+    def __init__(self,source_model,target_model,s_down = True ,t_down = True,voxel = 0.001):
+        self.voxel_size = voxel
+
+        if s_down:
+            source_model = source_model.voxel_down_sample(self.voxel_size)
+        if t_down:
+            target_model = target_model.voxel_down_sample(self.voxel_size)
+
+        self.source, self.source_fpfh = self.preprocess_point_cloud(source_model)
+        self.target, self.target_fpfh = self.preprocess_point_cloud(target_model)
+    
+    def preprocess_point_cloud(self,pcd):
+
+        radius_normal = self.voxel_size * 2
+        pcd.estimate_normals(o3d.geometry.KDTreeSearchParamHybrid(radius=radius_normal, max_nn=30))
+
+        radius_feature = self.voxel_size * 5
+        pcd_fpfh = o3d.pipelines.registration.compute_fpfh_feature(pcd, o3d.geometry.KDTreeSearchParamHybrid(radius=radius_feature, max_nn=100))
+        return pcd, pcd_fpfh
+
+    def estimate(self):
+
+        distance_threshold = self.voxel_size * 1.5
+        threshold = 0.002
+        limit = 10
+
+        round = 0
+        while True:
+            # Global estimate
+            result = o3d.pipelines.registration.registration_ransac_based_on_feature_matching(
+                                        self.source, self.target, self.source_fpfh, self.target_fpfh, True, distance_threshold,
+                                        o3d.pipelines.registration.TransformationEstimationPointToPoint(False),3, 
+                                        [o3d.pipelines.registration.CorrespondenceCheckerBasedOnEdgeLength(0.9),
+                                        o3d.pipelines.registration.CorrespondenceCheckerBasedOnDistance(distance_threshold)], 
+                                        o3d.pipelines.registration.RANSACConvergenceCriteria(100000, 0.999))
+
+            # evaluate after global pose estimate
+            # fitness >, inlier_rmse <
+            evaluation = o3d.pipelines.registration.evaluate_registration(self.source, self.target, threshold, result.transformation)
+            # print(f"=====PRE=====")
+            # print(f"fitness : {evaluation.fitness}")
+            # print(f"inlier_rmse : {evaluation.inlier_rmse}")
+            
+            # Point to plane estimate   need pre_tfm
+        
+            reg_p2l = o3d.pipelines.registration.registration_icp(
+                                        self.source, self.target, threshold, result.transformation,
+                                        o3d.pipelines.registration.TransformationEstimationPointToPlane())
+            
+            round +=1
+            if reg_p2l.fitness > 0.3 or round > limit or (reg_p2l.fitness == 0.0 and reg_p2l.inlier_rmse == 0.0):
+                print(f"=====Result=====")
+                print(f"fitness : {reg_p2l.fitness}")
+                print(f"inlier_rmse : {reg_p2l.inlier_rmse}")
+                break
+
+        return reg_p2l.transformation,reg_p2l.fitness
+
+def draw_registration_result(source, target, transformation):
+    source_temp = copy.deepcopy(source)
+    target_temp = copy.deepcopy(target)
+    source_temp.paint_uniform_color([1, 0.706, 0])
+    target_temp.paint_uniform_color([0, 0.651, 0.929])
+    source_temp.transform(transformation)
+    o3d.visualization.draw_geometries([source_temp, target_temp])

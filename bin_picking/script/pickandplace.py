@@ -35,13 +35,13 @@ moveit_commander.roscpp_initialize(sys.argv)
 robot = moveit_commander.RobotCommander()
 scene = moveit_commander.PlanningSceneInterface()
 
-# process_now = 'sim'
-process_now = 'zivid'
-# process_now = 'azure'
+# cam_type = 'sim'
+cam_type = 'zivid'
+# cam_type = 'azure'
 
 # Setup ROS Node
 rospy.init_node("PickAndPlace", anonymous=True)
-if process_now  !='sim':
+if cam_type  !='sim':
     pub = rospy.Publisher('Robotiq2FGripperRobotOutput', outputMsg.Robotiq2FGripper_robot_output)
     
 rate = rospy.Rate(10) # 10hz
@@ -71,7 +71,7 @@ display_trajectory_publisher = rospy.Publisher(
     )
 
 # GRIPPER
-if process_now =='sim':
+if cam_type =='sim':
     group_name = "gripper"
     group_gripper = moveit_commander.MoveGroupCommander(group_name)
     group_gripper.set_max_velocity_scaling_factor(control_speed)
@@ -181,20 +181,20 @@ else:
 D2R = np.pi/180
 R2D = 180/np.pi
 
-if process_now == 'sim':
+if cam_type == 'sim':
     cam = sim_cam(get_depth = False)
-elif process_now == 'zivid':
+elif cam_type == 'zivid':
     cam = zivid_cam()
-elif process_now == 'azure':
+elif cam_type == 'azure':
     cam = Azure_cam()
 
 class RobotPickPlace:
     def __init__(self):
         
         rospy.loginfo(":: Starting RobotPose ::")
-        if process_now == 'sim':
+        if cam_type == 'sim':
             self.Robotpose = np.loadtxt('/home/oongking/RobotArm_ws/src/bin_picking/script/simRobotpose.txt',delimiter=',')
-        elif process_now == 'zivid' or process_now == 'azure':
+        elif cam_type == 'zivid' or cam_type == 'azure':
             self.Robotpose = np.loadtxt('/home/oongking/RobotArm_ws/src/bin_picking/script/realRobotpose.txt',delimiter=',')
 
         offset_1 = np.eye(4,dtype=float)
@@ -208,7 +208,7 @@ class RobotPickPlace:
         
         cam_box_tf = np.matmul(self.Robotpose,offset_tf)
 
-        if process_now == 'sim':
+        if cam_type == 'sim':
             z_offset = 0.003
         else:
             z_offset = -0.01
@@ -231,10 +231,13 @@ class RobotPickPlace:
         
         self.place_order = 0
     
+    def set_cam_box(self,ws_tf):
+        self.cam_box = fixbox(ws_tf[:3, :3],ws_tf[:3,3],0, x = 0.3, y = 0.3, z = 0.1)
+
     def reload(self):
-        if process_now == 'sim':
+        if cam_type == 'sim':
             self.Robotpose = np.loadtxt('/home/oongking/RobotArm_ws/src/bin_picking/script/simRobotpose.txt',delimiter=',')
-        elif process_now == 'zivid' or process_now == 'azure':
+        elif cam_type == 'zivid' or cam_type == 'azure':
             self.Robotpose = np.loadtxt('/home/oongking/RobotArm_ws/src/bin_picking/script/realRobotpose.txt',delimiter=',')
 
     def get_robot_pose(self):
@@ -243,7 +246,7 @@ class RobotPickPlace:
     def choose_pose(self,pcd):
         down_pcd = pcd.voxel_down_sample(voxel_size=0.005)
         down_pcd.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.02, max_nn=50))
-        volume,pcds = Cluster(down_pcd)
+        volume,pcds = Cluster(down_pcd, Clus_eps=0.02, point_upper_limit = 200, point_lower_limit = 20)
 
         center = []
         angle = []
@@ -442,7 +445,7 @@ class RobotPickPlace:
         rate.sleep()
 
     def common_Gripper(self,pose):
-        if process_now == 'sim':
+        if cam_type == 'sim':
             print(pose)
             joint_goal = group_gripper.get_current_joint_values()
             joint_goal[0] = self.MotionPlan[pose][0]
@@ -470,81 +473,43 @@ class RobotPickPlace:
         move_group.stop()
         rate.sleep()
 
-
-
-def fixbox(rot,trans,z_offset) :
-    # Before rotate to canon
-    y = 0.6
-    x = 0.4
-    z = 0.1
-    
-
-    
-    fix_box = np.array([
-    [-x/2,-y/2,z_offset],
-    [-x/2, y/2,z_offset],
-    [x/2, y/2,z_offset],
-    [x/2,-y/2,z_offset],
-
-    [-x/2,-y/2,z+z_offset],
-    [-x/2, y/2,z+z_offset],
-    [x/2,-y/2,z+z_offset],
-    [x/2, y/2,z+z_offset]
-    ])
-
-    fixbox = o3d.geometry.OrientedBoundingBox.create_from_points(o3d.utility.Vector3dVector(fix_box))
-    fixbox.rotate(rot,(0,0,0))
-    fixbox.translate(np.asarray(trans,dtype=np.float64),relative=True)
-    fixbox.color = (0, 0, 0)
-
-    return fixbox 
-
-def Cluster(pcd):
-    pcds = []
-    volume = []
-    labels = np.array(pcd.cluster_dbscan(eps=0.02, min_points=20, print_progress=False))
-    
-    max_label = labels.max()
-    for i in range(0,max_label+1):
-        pcdcen = pcd.select_by_index(np.argwhere(labels==i))
-        pcdcen, ind = pcdcen.remove_statistical_outlier(nb_neighbors=20,
-                                                    std_ratio=1.0)
-        # print("pcdcen : ",np.asarray(pcdcen.points).shape)
-        # o3d.visualization.draw_geometries([pcdcen,RobotBaseCoor,Realcoor,pickplace.box])
-
-        if 200 >np.asarray(pcdcen.points).shape[0]>20 and np.linalg.norm(pcdcen.get_max_bound()-pcdcen.get_min_bound()) < 0.2:
-            box = pcdcen.get_oriented_bounding_box()
-            volume.append(box.volume())
-            pcdcen.estimate_normals()
-            # pcdcen.paint_uniform_color([ (max_label+1-i)/(max_label+1) , 0, 0])
-            pcds.append(pcdcen)
-    volume, pcds = zip(*sorted(zip(volume, pcds),reverse=True))
-    volume = list(volume)
-    pcds = list(pcds)
-
-    return volume,pcds
-
-
-
 # True w8 for pcd
 # pcd2 = cam.get_pcd()
 # pcd2.paint_uniform_color([1, 0.706, 0])
 pickplace = RobotPickPlace()
 
+pcd_model_eraser = o3d.io.read_point_cloud("/home/oongking/RobotArm_ws/src/model3d/script/buildModel/Data/eraser/eraser.pcd")
+pcd_model_shampoo = o3d.io.read_point_cloud("/home/oongking/RobotArm_ws/src/model3d/script/buildModel/Data/shampoo/shampoo.pcd")
+
 while not rospy.is_shutdown():
 
     print("=================================================================================")
-    print("\n:: Key command ::\n\tc : Preview Robotpose\n\tt : Full Single Process\n\tl : Full Multi Process\n\tp : Preview Process\n\te : Shutdown the Server")
+    print("\n:: Preview Key command ::\n\ta : Preview ArUco board\n\tc : Preview Robotpose\n\tu : Preview Alu Process"+
+            "\n\n:: Setup Config Key command ::\n\ts : Set Cam Workspace"+
+            "\n\n:: Alu Process Key command ::\n\tt : Full Single Alu Capture Process\n\ty : Full Multi Alu Capture Process")
     key = getch.getch().lower()
     print("key : ",key)
 
-    if key == 'c':
+
+
+    ### =========== Preview =========== ###
+
+    if key == 'a': # Preview Alu Process
+        rgb_image, depth_image, pcd_env = cam.capture()
+        Ar_tfm = workspace_ar_set(rgb_image, camera = cam_type, show = True)
+        ws_box = fixbox(Ar_tfm[:3, :3],Ar_tfm[:3,3],0, x = 0.3, y = 0.3, z = 0.1)
+        ws_coor = o3d.geometry.TriangleMesh.create_coordinate_frame(0.05,(0,0,0))
+        ws_coor.rotate(Ar_tfm[:3, :3],(0,0,0))
+        ws_coor.translate(np.asarray(Ar_tfm[:3,3],dtype=np.float64),relative=True)
+        o3d.visualization.draw_geometries([ws_coor,Realcoor,pcd_env,ws_box])
+
+    if key == 'c': # Preview Robotpose
         pickplace.reload()
         Realcoor = o3d.geometry.TriangleMesh.create_coordinate_frame(0.05,(0,0,0))
         RobotBaseCoor = o3d.geometry.TriangleMesh.create_coordinate_frame(0.1,(0,0,0))
-        if process_now != 'zivid':
+        if cam_type != 'zivid':
             pcd = cam.buildPCD()
-        elif process_now == 'zivid':
+        elif cam_type == 'zivid':
             rgb_image, depth_image, pcd = cam.capture()
 
         RobotBaseCoor.transform(pickplace.get_robot_pose())
@@ -552,7 +517,43 @@ while not rospy.is_shutdown():
         o3d.visualization.draw_geometries([RobotBaseCoor,Realcoor,pickplace.cam_box])
         o3d.visualization.draw_geometries([pcd,RobotBaseCoor,Realcoor,pickplace.cam_box])
 
-    if key == 't':
+    if key == 'u': # Preview Alu Process
+        Realcoor = o3d.geometry.TriangleMesh.create_coordinate_frame(0.1,(0,0,0))
+        RobotBaseCoor = o3d.geometry.TriangleMesh.create_coordinate_frame(0.1,(0,0,0))
+        # if cam_type != 'zivid':
+        pcd = cam.buildPCD()
+        # elif cam_type == 'zivid':
+        #     rgb_image, pcd = cam.capture()
+
+        RobotBaseCoor.transform(pickplace.get_robot_pose())
+
+        o3d.visualization.draw_geometries([pcd,RobotBaseCoor,Realcoor,pickplace.cam_box])
+
+        inv_tf = np.linalg.inv(pickplace.get_robot_pose())
+        pcd.transform(inv_tf)
+
+        crop_pcd = pcd.crop(pickplace.arm_box)
+        o3d.visualization.draw_geometries([crop_pcd,Realcoor,pickplace.arm_box])
+
+        pcd_sphere,pcd_cylinders,center,angle = pickplace.choose_pose(crop_pcd)
+
+        o3d.visualization.draw_geometries([Realcoor,pickplace.arm_box]+pcd_sphere+pcd_cylinders)
+        o3d.visualization.draw_geometries([pcd,Realcoor,pickplace.arm_box]+pcd_sphere+pcd_cylinders)
+
+
+
+    ### =========== Setup Config =========== ###
+
+    if key == 's': # Set Cam Workspace
+        rgb_image, depth_image = cam.get_rgbd()
+        Ar_tfm = workspace_ar_set(rgb_image, camera = cam_type, show = False)
+        pickplace.set_cam_box(Ar_tfm)
+
+
+
+    ### =========== Alu Process =========== ###
+
+    if key == 't': # Full Single Alu Capture Process
         pickplace.place_order = 0
         Realcoor = o3d.geometry.TriangleMesh.create_coordinate_frame(0.1,(0,0,0))
         RobotBaseCoor = o3d.geometry.TriangleMesh.create_coordinate_frame(0.1,(0,0,0))
@@ -577,8 +578,7 @@ while not rospy.is_shutdown():
         else:
             print(" No Object Detected")
 
-
-    if key == 'l':
+    if key == 'y': # Full Multi Alu Capture Process
         pickplace.place_order = 0
 
         Realcoor = o3d.geometry.TriangleMesh.create_coordinate_frame(0.1,(0,0,0))
@@ -600,7 +600,6 @@ while not rospy.is_shutdown():
             if np.asarray(crop_pcd.points).shape[0]>200:
                 # o3d.visualization.draw_geometries([crop_pcd,Realcoor,pickplace.arm_box])
                 pcd_sphere,pcd_cylinders,center,angle = pickplace.choose_pose(crop_pcd)
-
                 # o3d.visualization.draw_geometries([pcd,Realcoor,pickplace.arm_box]+pcd_sphere+pcd_cylinders)
 
                 pickplace.pick_multi_process(center[0],angle[0])
@@ -610,28 +609,45 @@ while not rospy.is_shutdown():
                 pickplace.common_Arm('prepick')
                 break
 
-    if key == 'p':
+   
+
+    ### =========== Shampoo Process =========== ###
+
+    if key == 'h': # Full Multi Shampoo Capture Process
+        pickplace.place_order = 0
         Realcoor = o3d.geometry.TriangleMesh.create_coordinate_frame(0.1,(0,0,0))
         RobotBaseCoor = o3d.geometry.TriangleMesh.create_coordinate_frame(0.1,(0,0,0))
-        # if process_now != 'zivid':
-        pcd = cam.buildPCD()
-        # elif process_now == 'zivid':
-        #     rgb_image, pcd = cam.capture()
-
         RobotBaseCoor.transform(pickplace.get_robot_pose())
-
-        o3d.visualization.draw_geometries([pcd,RobotBaseCoor,Realcoor,pickplace.cam_box])
-
         inv_tf = np.linalg.inv(pickplace.get_robot_pose())
-        pcd.transform(inv_tf)
 
-        crop_pcd = pcd.crop(pickplace.arm_box)
-        o3d.visualization.draw_geometries([crop_pcd,Realcoor,pickplace.arm_box])
+        while True:
 
-        pcd_sphere,pcd_cylinders,center,angle = pickplace.choose_pose(crop_pcd)
+            pcd = cam.buildPCD()
+            crop_pcd = pcd.crop(pickplace.cam_box)
+            crop_pcd.transform(inv_tf)
+            print(np.asarray(crop_pcd.points).shape[0])
 
-        o3d.visualization.draw_geometries([Realcoor,pickplace.arm_box]+pcd_sphere+pcd_cylinders)
-        o3d.visualization.draw_geometries([pcd,Realcoor,pickplace.arm_box]+pcd_sphere+pcd_cylinders)
+            # o3d.visualization.draw_geometries([crop_pcd,Realcoor])
+            if np.asarray(crop_pcd.points).shape[0]>200:
+                
+                group_model = crop_pcd.voxel_down_sample(voxel_size=0.001)
+                group_model, ind = group_model.remove_statistical_outlier(nb_neighbors=50, std_ratio=1.0)
+    
+                volume,pcds = Cluster(group_model)
+
+                obj_tf,fitnesses = obj_pose_estimate(pcd_model_shampoo,pcds,point_p_obj = 4000)
+                obj_coor = coordinates(obj_tf)
+
+                o3d.visualization.draw_geometries([ws_coor,Realcoor,pcd_env,ws_box,pcd_model_shampoo]+obj_coor)
+
+                ############ multi capture process ############
+
+            else:
+                pickplace.common_Arm('prepick')
+                break
+
+
+            
 
     if key == 'e':
 
