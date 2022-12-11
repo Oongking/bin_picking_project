@@ -1,3 +1,17 @@
-print("\n:: Preview Key command ::\n\ta : Preview ArUco board\n\tc : Preview Robotpose\n\tu : Preview Alu Process"+
-            "\n\n:: Setup Config Key command ::\n\ts : Set Cam Workspace"+
-            "\n\n:: Alu Process Key command ::\n\tt : Full Single Alu Capture Process\n\ty : Full Multi Alu Capture Process")
+
+import numpy as np
+
+
+# axis_xyz = np.eye(3)
+
+# for axis in axis_xyz:
+#     print(f"axis: {axis}")
+
+x = np.array([1,0,0])
+y = np.array([0,1,0])
+z = np.array([0.,0.,0.])
+
+# print(np.absolute(np.cross(x,x)))
+# np.any(my_array[:, 0] == value)
+
+print(np.all(z[:] == 0))

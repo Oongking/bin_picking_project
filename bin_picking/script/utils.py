@@ -425,7 +425,7 @@ class zivid_cam():
                 return None  
 
             # Set open3d_cloud
-            print("field_names : ",field_names)
+            # print("field_names : ",field_names)
             if "rgba" in field_names:
                 IDX_RGB_IN_FIELD=3 # x, y, z, rgb
                 
@@ -571,174 +571,6 @@ class sim_cam():
             return open3d_cloud
         else:
             return None
-
-""" ######################################################################################### """
-# Function
-def resize(img,scale_percent):
-    # scale_percent = 50 # percent of original size
-    width = int(img.shape[1] * scale_percent / 100)
-    height = int(img.shape[0] * scale_percent / 100)
-    dim = (width, height)
-    
-        # resize image
-    resized = cv2.resize(img, dim, interpolation = cv2.INTER_AREA)
-    return resized
-
-def buildPCD(rgb_image,depth_image, camera = 'zivid'):
-
-    depth = o3d.geometry.Image(depth_image)
-    color = o3d.geometry.Image(cv2.cvtColor(rgb_image, cv2.COLOR_BGR2RGB))
-    rgbd = o3d.geometry.RGBDImage.create_from_color_and_depth(color, depth, depth_scale=1.0, depth_trunc=100.0, convert_rgb_to_intensity=False)
-    if camera == 'zivid':
-        pcd = o3d.geometry.PointCloud.create_from_rgbd_image(rgbd, zivid_intrinsic)
-    if camera == 'sim':
-        pcd = o3d.geometry.PointCloud.create_from_rgbd_image(rgbd, sim_intrinsic)
-    if camera == 'azure':
-        pcd = o3d.geometry.PointCloud.create_from_rgbd_image(rgbd, azure_intrinsic)
-
-    return pcd
-
-def depfromcolor(mask,depth_image):
-    _,alpha = cv2.threshold(mask,0,255,cv2.THRESH_BINARY)
-    alpha[alpha == 255] = 1
-    depth_image = depth_image*alpha
-    return depth_image
-
-def fixbox(rot,trans,z_offset,x = 0.4,y = 0.6 ,z = 0.1) :
-    # Before rotate to canon
-    
-    fix_box = np.array([
-    [-x/2,-y/2,z_offset],
-    [-x/2, y/2,z_offset],
-    [x/2, y/2,z_offset],
-    [x/2,-y/2,z_offset],
-
-    [-x/2,-y/2,z+z_offset],
-    [-x/2, y/2,z+z_offset],
-    [x/2,-y/2,z+z_offset],
-    [x/2, y/2,z+z_offset]
-    ])
-
-    fixbox = o3d.geometry.OrientedBoundingBox.create_from_points(o3d.utility.Vector3dVector(fix_box))
-    fixbox.rotate(rot,(0,0,0))
-    fixbox.translate(np.asarray(trans,dtype=np.float64),relative=True)
-    fixbox.color = (0, 0, 0)
-
-    return fixbox 
-
-def Cluster(pcd, Clus_eps=0.01, Clus_min_points=20, Out_nb_neighbors = 20, Out_std_ratio = 1.0, point_upper_limit = 50000, point_lower_limit = 700, obj_size = 0.2):
-    pcds = []
-    volume = []
-    labels = np.array(pcd.cluster_dbscan(eps = Clus_eps, min_points = Clus_min_points, print_progress=False))
-    
-    max_label = labels.max()
-    for i in range(0,max_label+1):
-        pcdcen = pcd.select_by_index(np.argwhere(labels==i))
-        pcdcen, ind = pcdcen.remove_statistical_outlier(nb_neighbors = Out_nb_neighbors,
-                                                    std_ratio = Out_std_ratio)
-        # print("pcdcen : ",np.asarray(pcdcen.points).shape)
-        
-        if point_upper_limit >np.asarray(pcdcen.points).shape[0]>point_lower_limit and np.linalg.norm(pcdcen.get_max_bound()-pcdcen.get_min_bound()) < obj_size:
-            # o3d.visualization.draw_geometries([pcdcen])
-            box = pcdcen.get_oriented_bounding_box()
-            volume.append(box.volume())
-            pcdcen.estimate_normals()
-            pcds.append(pcdcen)
-    volume, pcds = zip(*sorted(zip(volume, pcds),reverse=True))
-    volume = list(volume)
-    pcds = list(pcds)
-
-    return volume,pcds
-
-def workspace_ar_set(rgb_image, camera = 'zivid', show = False):
-    if camera == 'zivid':
-        boardA3 = zivid_boardA3
-        matrix_coefficients = zivid_matrix_coefficients
-        distortion_coefficients = zivid_distortion_coefficients
-        offset_x = A3_zivid_offset_x
-        offset_y = A3_zivid_offset_y
-    if camera == 'azure':
-        boardA3 = azure_boardA3
-        matrix_coefficients = azure_matrix_coefficients
-        distortion_coefficients = azure_distortion_coefficients
-        offset_x = A3_azure_offset_x
-        offset_y = A3_azure_offset_y
-
-    rvec=None
-    tvec=None
-    (corners, ids,rejected)= cv2.aruco.detectMarkers(rgb_image,arucoDictA3,parameters= arucoParams)
-
-    if len(corners) > 0:
-        cv2.aruco.drawDetectedMarkers(rgb_image,corners,ids)
-        _,rvec,tvec = cv2.aruco.estimatePoseBoard( corners, ids, boardA3, matrix_coefficients, distortion_coefficients,rvec,tvec)
-
-    transformation_matrix = np.eye(4,dtype=float)
-    transformation_matrix[:3, :3], _ = cv2.Rodrigues(rvec)
-    q= tf.transformations.quaternion_from_matrix(transformation_matrix)
-
-    vec= [offset_x,offset_y,0,0]
-    global_offset=quaternion_multiply(quaternion_multiply(q, vec),quaternion_conjugate(q))
-
-    tvec[0]=tvec[0]+global_offset[0]
-    tvec[1]=tvec[1]+global_offset[1]
-    tvec[2]=tvec[2]+global_offset[2]
-    transformation_matrix[ :3, 3] = np.asarray(tvec).transpose()
-
-    if show:
-        if rvec is not None and tvec is not None:
-            cv2.aruco.drawAxis( rgb_image, matrix_coefficients, distortion_coefficients, rvec, tvec, 0.08 )
-        while True:
-            cv2.imshow("Original Image",rgb_image)
-            if cv2.waitKey(1) & 0xFF==ord('q'):
-                break
-    
-    return transformation_matrix
-
-def obj_pose_estimate(pcd_model,pcds,point_p_obj = 4000):
-    obj_cluster = []
-    for pcd in pcds:
-        num_obj = np.trunc(len(pcd.points)/point_p_obj).astype(int)
-        if num_obj > 0:
-            xyz = np.asarray(pcd.points)
-
-            clf = Kmeans(k = num_obj,tolerance=0.0001)
-            labels = clf.predict(xyz)
-
-            max_label = labels.max()
-            
-            for i in range(0,max_label+1):
-                pcdcen = pcd.select_by_index(np.argwhere(labels==i))
-                # o3d.visualization.draw_geometries([ws_coor,pcdcen])
-                obj_cluster.append(pcdcen)
-
-            # draw_labels_on_model(pcd,labels)
-    
-    obj_tf = []
-    fitnesses = []
-    for obj in obj_cluster:
-        icp = icp_pose_estimate(pcd_model,obj,t_down= False)
-        tfm,fitness = icp.estimate()
-        
-        if fitness > 0.38:
-            fitnesses.append(fitness)
-            obj_tf.append(tfm)
-
-        # draw_registration_result(pcd_model, obj, tfm)
-
-    fitnesses, obj_tf = zip(*sorted(zip(fitnesses, obj_tf),reverse=True))
-    fitnesses = list(fitnesses)
-    obj_tf = list(obj_tf)
-
-    return obj_tf,fitnesses
-
-def coordinates(TFMs):
-    coors = []
-    for tf in TFMs:
-        coor = o3d.geometry.TriangleMesh.create_coordinate_frame(0.05,[0,0,0])
-        coor.rotate(tf[:3, :3],(0,0,0))
-        coor.translate(np.asarray(tf[:3,3],dtype=np.float64),relative=True)
-        coors.append(coor)
-    return coors
 
 """ ######################################################################################### """
 # K-mean
@@ -889,7 +721,7 @@ class icp_pose_estimate:
                                         o3d.pipelines.registration.TransformationEstimationPointToPlane())
             
             round +=1
-            if reg_p2l.fitness > 0.3 or round > limit or (reg_p2l.fitness == 0.0 and reg_p2l.inlier_rmse == 0.0):
+            if reg_p2l.fitness > 0.3 or round > limit: # or (reg_p2l.fitness == 0.0 and reg_p2l.inlier_rmse == 0.0):
                 print(f"=====Result=====")
                 print(f"fitness : {reg_p2l.fitness}")
                 print(f"inlier_rmse : {reg_p2l.inlier_rmse}")
@@ -904,3 +736,251 @@ def draw_registration_result(source, target, transformation):
     target_temp.paint_uniform_color([0, 0.651, 0.929])
     source_temp.transform(transformation)
     o3d.visualization.draw_geometries([source_temp, target_temp])
+
+""" ######################################################################################### """
+# Function
+def resize(img,scale_percent):
+    # scale_percent = 50 # percent of original size
+    width = int(img.shape[1] * scale_percent / 100)
+    height = int(img.shape[0] * scale_percent / 100)
+    dim = (width, height)
+    
+        # resize image
+    resized = cv2.resize(img, dim, interpolation = cv2.INTER_AREA)
+    return resized
+
+def buildPCD(rgb_image,depth_image, camera = 'zivid'):
+
+    depth = o3d.geometry.Image(depth_image)
+    color = o3d.geometry.Image(cv2.cvtColor(rgb_image, cv2.COLOR_BGR2RGB))
+    rgbd = o3d.geometry.RGBDImage.create_from_color_and_depth(color, depth, depth_scale=1.0, depth_trunc=100.0, convert_rgb_to_intensity=False)
+    if camera == 'zivid':
+        pcd = o3d.geometry.PointCloud.create_from_rgbd_image(rgbd, zivid_intrinsic)
+    if camera == 'sim':
+        pcd = o3d.geometry.PointCloud.create_from_rgbd_image(rgbd, sim_intrinsic)
+    if camera == 'azure':
+        pcd = o3d.geometry.PointCloud.create_from_rgbd_image(rgbd, azure_intrinsic)
+
+    return pcd
+
+def depfromcolor(mask,depth_image):
+    _,alpha = cv2.threshold(mask,0,255,cv2.THRESH_BINARY)
+    alpha[alpha == 255] = 1
+    depth_image = depth_image*alpha
+    return depth_image
+
+def fixbox(rot,trans,z_offset,x = 0.4,y = 0.6 ,z = 0.1) :
+    # Before rotate to canon
+    
+    fix_box = np.array([
+    [-x/2,-y/2,z_offset],
+    [-x/2, y/2,z_offset],
+    [x/2, y/2,z_offset],
+    [x/2,-y/2,z_offset],
+
+    [-x/2,-y/2,z+z_offset],
+    [-x/2, y/2,z+z_offset],
+    [x/2,-y/2,z+z_offset],
+    [x/2, y/2,z+z_offset]
+    ])
+
+    fixbox = o3d.geometry.OrientedBoundingBox.create_from_points(o3d.utility.Vector3dVector(fix_box))
+    fixbox.rotate(rot,(0,0,0))
+    fixbox.translate(np.asarray(trans,dtype=np.float64),relative=True)
+    fixbox.color = (0, 0, 0)
+
+    return fixbox 
+
+def Cluster(pcd, Clus_eps=0.01, Clus_min_points=20, Out_nb_neighbors = 20, Out_std_ratio = 1.0, point_upper_limit = 50000, point_lower_limit = 700, obj_size = 0.2):
+    pcds = []
+    volume = []
+    labels = np.array(pcd.cluster_dbscan(eps = Clus_eps, min_points = Clus_min_points, print_progress=False))
+    
+    max_label = labels.max()
+    for i in range(0,max_label+1):
+        pcdcen = pcd.select_by_index(np.argwhere(labels==i))
+        pcdcen, ind = pcdcen.remove_statistical_outlier(nb_neighbors = Out_nb_neighbors,
+                                                    std_ratio = Out_std_ratio)
+        print("pcdcen : ",np.asarray(pcdcen.points).shape)
+        
+        if point_upper_limit >np.asarray(pcdcen.points).shape[0]>point_lower_limit and np.linalg.norm(pcdcen.get_max_bound()-pcdcen.get_min_bound()) < obj_size:
+            # o3d.visualization.draw_geometries([pcdcen])
+            box = pcdcen.get_oriented_bounding_box()
+            volume.append(box.volume())
+            pcdcen.estimate_normals()
+            pcds.append(pcdcen)
+    volume, pcds = zip(*sorted(zip(volume, pcds),reverse=True))
+    volume = list(volume)
+    pcds = list(pcds)
+
+    return volume,pcds
+
+def workspace_ar_set(rgb_image, camera = 'zivid', show = False):
+    if camera == 'zivid':
+        boardA3 = zivid_boardA3
+        matrix_coefficients = zivid_matrix_coefficients
+        distortion_coefficients = zivid_distortion_coefficients
+        offset_x = A3_zivid_offset_x
+        offset_y = A3_zivid_offset_y
+    if camera == 'azure':
+        boardA3 = azure_boardA3
+        matrix_coefficients = azure_matrix_coefficients
+        distortion_coefficients = azure_distortion_coefficients
+        offset_x = A3_azure_offset_x
+        offset_y = A3_azure_offset_y
+
+    rvec=None
+    tvec=None
+    (corners, ids,rejected)= cv2.aruco.detectMarkers(rgb_image,arucoDictA3,parameters= arucoParams)
+
+    if len(corners) > 0:
+        cv2.aruco.drawDetectedMarkers(rgb_image,corners,ids)
+        _,rvec,tvec = cv2.aruco.estimatePoseBoard( corners, ids, boardA3, matrix_coefficients, distortion_coefficients,rvec,tvec)
+
+    transformation_matrix = np.eye(4,dtype=float)
+    transformation_matrix[:3, :3], _ = cv2.Rodrigues(rvec)
+    q= tf.transformations.quaternion_from_matrix(transformation_matrix)
+
+    vec= [offset_x,offset_y,0,0]
+    global_offset=quaternion_multiply(quaternion_multiply(q, vec),quaternion_conjugate(q))
+
+    tvec[0]=tvec[0]+global_offset[0]
+    tvec[1]=tvec[1]+global_offset[1]
+    tvec[2]=tvec[2]+global_offset[2]
+    transformation_matrix[ :3, 3] = np.asarray(tvec).transpose()
+
+    if show:
+        if rvec is not None and tvec is not None:
+            cv2.aruco.drawAxis( rgb_image, matrix_coefficients, distortion_coefficients, rvec, tvec, 0.08 )
+        while True:
+            cv2.imshow("Original Image",rgb_image)
+            if cv2.waitKey(1) & 0xFF==ord('q'):
+                cv2.destroyAllWindows()
+                break
+    
+    return transformation_matrix
+
+def obj_pose_estimate(pcd_model,pcds,point_p_obj = 4000, show = False, lowest_fitness = 0.38):
+    obj_cluster = []
+    for pcd in pcds:
+        num_obj = np.trunc(len(pcd.points)/point_p_obj).astype(int)
+        if num_obj > 0:
+            xyz = np.asarray(pcd.points)
+
+            clf = Kmeans(k = num_obj,tolerance=0.0001)
+            labels = clf.predict(xyz)
+
+            max_label = labels.max()
+            
+            for i in range(0,max_label+1):
+                pcdcen = pcd.select_by_index(np.argwhere(labels==i))
+                # o3d.visualization.draw_geometries([ws_coor,pcdcen])
+                obj_cluster.append(pcdcen)
+
+            if show:draw_labels_on_model(pcd,labels)
+    
+    obj_tf = []
+    fitnesses = []
+    for obj in obj_cluster:
+        icp = icp_pose_estimate(pcd_model,obj,t_down= False)
+        tfm,fitness = icp.estimate()
+        
+        if fitness > lowest_fitness:
+            fitnesses.append(fitness)
+            obj_tf.append(tfm)
+
+        if show:draw_registration_result(pcd_model, obj, tfm)
+
+    if fitnesses != [] and obj_tf != []:
+        fitnesses, obj_tf = zip(*sorted(zip(fitnesses, obj_tf),reverse=True))
+        fitnesses = list(fitnesses)
+        obj_tf = list(obj_tf)
+
+    return obj_tf,fitnesses
+
+def coordinates(TFMs,size = 0.05):
+    coors = []
+    for tf_obj in TFMs:
+        coor = o3d.geometry.TriangleMesh.create_coordinate_frame(size,[0,0,0])
+        coor.rotate(tf_obj[:3, :3],(0,0,0))
+        coor.translate(np.asarray(tf_obj[:3,3],dtype=np.float64),relative=True)
+        coors.append(coor)
+    return coors
+
+def coordinate(TFM,size = 0.05):
+    coor = o3d.geometry.TriangleMesh.create_coordinate_frame(size,[0,0,0])
+    coor.rotate(TFM[:3, :3],(0,0,0))
+    coor.translate(np.asarray(TFM[:3,3],dtype=np.float64),relative=True)
+    return coor
+
+def choose_pick_axis(obj_tf, model_offset = 0.0, pick_offset_z = 0.0):
+    
+    offset_tf = np.eye(4)
+    offset_tf[:3,3] = [0,0,model_offset/2]
+
+    obj_tf = np.matmul(obj_tf,offset_tf)
+
+
+    axis_xyz = np.eye(3)
+    z_axis = [0,0,1] # robot base
+    x_axis = [1,0,0] # gripper pick axis
+    
+    anglebuffer = 180
+    move_xyz_tag = None
+    rot_xyz_tag = None
+    invert_move_axis = None
+    for i,axis in enumerate(axis_xyz):
+        invert_tag = 1
+        pick_axis = axis
+        pick_axis = np.matmul(obj_tf[:3, :3],pick_axis)
+        if pick_axis[2]<0:
+            pick_axis *= -1
+            invert_tag = -1
+
+        rotation_matrix,angle = rotation_matrix_from_vectors(z_axis,pick_axis)
+
+        if angle < anglebuffer:
+            anglebuffer = angle
+
+            move_xyz_tag = axis
+            invert_move_axis = invert_tag
+            rot_xyz_tag = np.absolute(np.cross(x_axis,axis))
+            # print(f"rot_xyz_tag : {rot_xyz_tag}")
+            if np.all(rot_xyz_tag[:] == 0):
+                rot_xyz_tag = np.array([1.,0.,0.])
+
+    
+    # print(f"np.where(rot_xyz_tag == 1)[0] : {np.where(rot_xyz_tag == 1)[0]}")
+    if np.where(rot_xyz_tag == 1)[0] == 0:
+        #need to rotate around z 180
+        if invert_move_axis >0:
+            rot = Rz(180)
+        else:
+            rot = np.eye(3)
+        move_xyz_tag = move_xyz_tag * 0 # not offset
+
+    if np.where(rot_xyz_tag == 1)[0] == 1:
+        #need to rotate around y 90
+        if invert_move_axis >0:
+            rot = Ry(90)
+        else:
+            rot = Ry(-90)
+        move_xyz_tag = move_xyz_tag * pick_offset_z * invert_move_axis  # offset 0cm because of model
+
+    if np.where(rot_xyz_tag == 1)[0] == 2:
+        #need to rotate around z 90
+        if invert_move_axis >0:
+            rot = Rz(-90)
+        else:
+            rot = Rz(90)
+        move_xyz_tag = move_xyz_tag * 0 # not offset
+
+    pick_tf = np.eye(4)
+    pick_tf[:3,:3] = rot
+    pick_tf[:3,3] = move_xyz_tag
+
+    return np.matmul(obj_tf,pick_tf)
+    
+
+
+

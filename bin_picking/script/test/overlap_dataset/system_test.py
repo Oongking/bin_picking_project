@@ -13,7 +13,7 @@ pcd_model_shampoo = o3d.io.read_point_cloud("/home/oongking/RobotArm_ws/src/mode
 
 # pcd_env = o3d.io.read_point_cloud("/home/oongking/RobotArm_ws/src/bin_picking/script/test/overlap_dataset/eraser_2/eraser_2_make_pcd.pcd")
 # pcd_env = o3d.io.read_point_cloud("/home/oongking/RobotArm_ws/src/bin_picking/script/test/overlap_dataset/shampoo_1/shampoo_1_make_pcd.pcd")
-pcd_env = o3d.io.read_point_cloud("/home/oongking/RobotArm_ws/src/bin_picking/script/test/overlap_dataset/eraser_shampoo_3/eraser_shampoo_3_make_pcd.pcd")
+pcd_env = o3d.io.read_point_cloud("/home/oongking/RobotArm_ws/src/bin_picking/script/test/overlap_dataset/eraser_shampoo_2/eraser_shampoo_2_make_pcd.pcd")
 
 
 Realcoor = o3d.geometry.TriangleMesh.create_coordinate_frame(0.1,[0,0,0])
@@ -31,65 +31,21 @@ group_model = pcd_env.crop(ws_box)
 group_model = group_model.voxel_down_sample(voxel_size=0.001)
 group_model, ind = group_model.remove_statistical_outlier(nb_neighbors=50, std_ratio=1.0)
 
-# o3d.visualization.draw_geometries([ws_coor,Realcoor,group_model,ws_box,pcd_model])
+o3d.visualization.draw_geometries([ws_coor,Realcoor,group_model,ws_box])
 
 volume,pcds = Cluster(group_model)
 
 o3d.visualization.draw_geometries([ws_coor]+pcds)
 
 
-def obj_pose_estimate(pcd_model,pcds,point_p_obj = 4000):
-    obj_cluster = []
-    for pcd in pcds:
-        num_obj = np.trunc(len(pcd.points)/point_p_obj).astype(int)
-        if num_obj > 0:
-            xyz = np.asarray(pcd.points)
-
-            clf = Kmeans(k = num_obj,tolerance=0.0001)
-            labels = clf.predict(xyz)
-
-            max_label = labels.max()
-            
-            for i in range(0,max_label+1):
-                pcdcen = pcd.select_by_index(np.argwhere(labels==i))
-                # o3d.visualization.draw_geometries([ws_coor,pcdcen])
-                obj_cluster.append(pcdcen)
-
-            # draw_labels_on_model(pcd,labels)
-    
-    obj_tf = []
-    fitnesses = []
-    for obj in obj_cluster:
-        icp = icp_pose_estimate(pcd_model,obj,t_down= False)
-        tfm,fitness = icp.estimate()
-        
-        if fitness > 0.38:
-            fitnesses.append(fitness)
-            obj_tf.append(tfm)
-
-        # draw_registration_result(pcd_model, obj, tfm)
-
-    fitnesses, obj_tf = zip(*sorted(zip(fitnesses, obj_tf),reverse=True))
-    fitnesses = list(fitnesses)
-    obj_tf = list(obj_tf)
-
-    return obj_tf,fitnesses
-
-def coordinates(TFMs):
-    coors = []
-    for tf in TFMs:
-        coor = o3d.geometry.TriangleMesh.create_coordinate_frame(0.05,[0,0,0])
-        coor.rotate(tf[:3, :3],(0,0,0))
-        coor.translate(np.asarray(tf[:3,3],dtype=np.float64),relative=True)
-        coors.append(coor)
-    return coors
-
-            
 obj_tf,fitnesses = obj_pose_estimate(pcd_model_shampoo,pcds,point_p_obj = 4000)
 shampoo_coor = coordinates(obj_tf)
 
 obj_tf,fitnesses = obj_pose_estimate(pcd_model_eraser,pcds,point_p_obj = 800)
 eraser_coor = coordinates(obj_tf)
+
+o3d.visualization.draw_geometries([ws_coor,Realcoor,pcd_env,ws_box]+shampoo_coor+eraser_coor)
+
 
 # xyz = np.asarray(pcds[0].points)
 
@@ -126,7 +82,7 @@ eraser_coor = coordinates(obj_tf)
 # fitnesses = list(fitnesses)
 # obj_coor = list(obj_coor)
 
-o3d.visualization.draw_geometries([ws_coor,Realcoor,pcd_env,ws_box]+shampoo_coor+eraser_coor)
+# o3d.visualization.draw_geometries([ws_coor,Realcoor,pcd_env,ws_box]+shampoo_coor+eraser_coor)
 
 
 

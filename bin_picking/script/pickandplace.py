@@ -117,7 +117,7 @@ else:
             command = outputMsg.Robotiq2FGripper_robot_output()
             command.rACT = 1
             command.rGTO = 1
-            command.rSP  = 255 # speed
+            command.rSP  = 123 # speed
             command.rFR  = 5 # Force
 
             command.rPR = 127
@@ -300,16 +300,16 @@ class RobotPickPlace:
             
             # rotation[:3,:3] = np.matmul(Ry(90),Rx((angle*R2D)))
 
-            self.control_arm(pre_center,rotation)
-            self.control_arm(center,rotation)
+            self.control_plannar_arm(pre_center,rotation)
+            self.control_plannar_arm(center,rotation)
             self.common_Gripper('grip_close')
-            self.control_arm(pre_center,rotation)
+            self.control_plannar_arm(pre_center,rotation)
             rospy.sleep(1.)
 
             # place
-            # self.control_arm((0.4,0.1,0.35),rotation)
+            # self.control_plannar_arm((0.4,0.1,0.35),rotation)
             # self.common_Gripper('half_open')
-            self.control_arm([0.3,0,0.15],rotation)
+            self.control_plannar_arm([0.3,0,0.15],rotation)
             self.place_inorder()
 
         self.common_Arm('prepick')
@@ -318,7 +318,6 @@ class RobotPickPlace:
         rospy.loginfo(":: Pick Process ::")
         self.common_Gripper('full_open')
         self.common_Arm('prepick')
-
 
         pre_center = copy.deepcopy(center)
         pre_center[2] += 0.05
@@ -329,26 +328,60 @@ class RobotPickPlace:
             angleD = (angle*R2D)-180
         else:
             angleD = (angle*R2D)
-        
+
         print(f"angleD : {angleD}")
         rotation[:3,:3] = np.matmul(Ry(90),Rx((angleD)))
-        
+
         # rotation[:3,:3] = np.matmul(Ry(90),Rx((angle*R2D)))
 
-        self.control_arm(pre_center,rotation)
-        self.control_arm(center,rotation)
+        self.control_plannar_arm(pre_center,rotation)
+        self.control_plannar_arm(center,rotation)
         self.common_Gripper('grip_close')
-        self.control_arm(pre_center,rotation)
+        self.control_plannar_arm(pre_center,rotation)
         rospy.sleep(1.)
 
         # place
-        # self.control_arm((0.4,0.1,0.35),rotation)
+        # self.control_plannar_arm((0.4,0.1,0.35),rotation)
         # self.common_Gripper('half_open')
-        self.control_arm([0.3,0,0.15],rotation)
+        self.control_plannar_arm([0.3,0,0.15],rotation)
         self.place_inorder()
 
+    
+    def pick_orien_multi_process(self,obj_tf,obj_name = 'shampoo'):
+        rospy.loginfo(":: Pick Process ::")
+        self.common_Gripper('full_open')
+        self.common_Arm('prepick')
 
-    def place_inorder(self):
+        pre_pick_pos = np.eye(4)
+        pre_pick_pos[:3,3] = [-0.1,0,0]
+
+        pre_pick_tf = np.matmul(obj_tf,pre_pick_pos)
+        
+
+        # pre_pick_coor = coordinate(pre_pick_tf, size = 0.03)
+        # o3d.visualization.draw_geometries([Realcoor,crop_pcd,objcoor1,pre_pick_coor])
+        self.control_orien_arm(pre_pick_tf)
+
+        # obj_coor = coordinate(obj_tf, size = 0.03)
+        # o3d.visualization.draw_geometries([Realcoor,crop_pcd,objcoor1,obj_coor])
+        self.control_orien_arm(obj_tf)
+        self.common_Gripper('grip_close')
+        self.control_orien_arm(pre_pick_tf)
+        rospy.sleep(1.)
+
+        # place
+        # self.control_plannar_arm((0.4,0.1,0.35),rotation)
+        # self.common_Gripper('half_open')
+        rotation = np.eye(4)
+        rotation[:3,:3] = Ry(90)
+        self.control_plannar_arm([0.3,0,0.15],rotation)
+        if obj_name == 'shampoo':
+            self.place_inorder(release_type = 'full_open')
+        if obj_name == 'eraser':
+            self.place_inorder(release_type = 'half_open')
+
+
+    def place_inorder(self, release_type = 'release_open'):
 
         start_prepos = np.array([0.161,-0.161,0.1])
         start_pos = np.array([0.161,-0.161,0.01])
@@ -359,29 +392,30 @@ class RobotPickPlace:
         pre_placepos = start_prepos+(order_offset*self.place_order)
         placepos = start_pos+(order_offset*self.place_order)
 
-        self.control_arm(pre_placepos,rotation)
+        self.control_plannar_arm(pre_placepos,rotation)
         rospy.sleep(1.)
-        self.control_arm(placepos,rotation)
+        self.control_plannar_arm(placepos,rotation)
 
         #for  experiment
-        print("====")
-        print("\n:: Key command ::\n\tg : Go")
+        # print("====")
+        # print("\n:: Key command ::\n\tg : Go")
         # key = getch.getch().lower()
         # print("key : ",key)
 
 
-        self.common_Gripper('release_open')
+        self.common_Gripper(release_type)
+
         rospy.sleep(1.)
-        self.control_arm(pre_placepos,rotation)
+        self.control_plannar_arm(pre_placepos,rotation)
         self.place_order +=1
         # rospy.loginfo(f":: Place_Order {self.place_order}:: \n pre_placepos : {pre_placepos}\n placepos : {placepos}")
 
 
-    def control_arm(self,position,rotation):
+    def control_plannar_arm(self,position,rotation):
 
         orientation = tf.transformations.quaternion_from_matrix(rotation)
         # not pricision offset
-        # gripper_offset = np.matmul([0.16,0,0],rotation[:3,:3])
+        # gripper_offset = np.matmul(rotation[:3,:3],[0.165,0,0])
         # print("gripper_offset : ",gripper_offset)
         gripper_offset = [0,0, 0.165]
         waypoints = []
@@ -402,7 +436,13 @@ class RobotPickPlace:
         # move_group.set_pose_target(pose_goal)
         
         waypoints.append(copy.deepcopy(pose_goal))
-        
+
+        rotation[0,3] = position[0]+gripper_offset[0]
+        rotation[1,3] = position[1]+gripper_offset[1]
+        rotation[2,3] = position[2]+gripper_offset[2]
+        # print(f"plannar matrix : {rotation} \n tpye : {rotation.dtype}")
+        # rotation_coor = coordinate(rotation, size = 0.03)
+        # o3d.visualization.draw_geometries([Realcoor,crop_pcd,rotation_coor])
 
         ### Trajectory goal point
         # position[0] = position[0]+gripper_offset[0]
@@ -434,6 +474,67 @@ class RobotPickPlace:
             )  # jump_threshold
 
         # print(f"plan : {len(plan.joint_trajectory.points) }")
+
+        display_trajectory = moveit_msgs.msg.DisplayTrajectory()
+        display_trajectory.trajectory_start = robot.get_current_state()
+        display_trajectory.trajectory.append(plan)
+            # Publish
+        display_trajectory_publisher.publish(display_trajectory)
+
+        move_group.execute(plan, wait=True)
+        rate.sleep()
+    
+    def control_orien_arm(self,pos_tf):
+
+        gripper_offset = np.eye(4)
+        gripper_offset[:3,3] = [-0.165,0,0]
+
+        af_offset_tf = np.matmul(pos_tf,gripper_offset)
+
+        
+        num = 0
+        while True:
+
+            waypoints = []
+            pose_goal = move_group.get_current_pose().pose
+
+            #### Single goal point
+            
+            pose_goal.position.x = af_offset_tf[0,3]
+            pose_goal.position.y = af_offset_tf[1,3]
+            pose_goal.position.z = af_offset_tf[2,3] + num
+            # print(f"pose_goal.position.z : {pose_goal.position.z}")
+            if pose_goal.position.z < 0.17:
+                pose_goal.position.z = 0.17
+            
+            orientation = tf.transformations.quaternion_from_matrix(af_offset_tf)
+
+            # print(f"orien matrix : {af_offset_tf}\n tpye : {af_offset_tf.dtype}")
+
+            pose_goal.orientation.x = orientation[0]
+            pose_goal.orientation.y = orientation[1]
+            pose_goal.orientation.z = orientation[2]
+            pose_goal.orientation.w = orientation[3]
+            
+            waypoints.append(copy.deepcopy(pose_goal))
+
+            (plan, fraction) = move_group.compute_cartesian_path(
+                    waypoints, 0.001, 0.0  # waypoints to follow  # eef_step
+                )  # jump_threshold
+                
+            # print(f"name : {plan.joint_trajectory.joint_names }")
+            # ['shoulder_pan_joint', 'shoulder_lift_joint', 'elbow_joint', 'wrist_1_joint', 'wrist_2_joint', 'wrist_3_joint']
+            # print(f"plan : {plan.joint_trajectory.points[0].positions }")
+            # while pick
+            #(0.421242892742157, -1.796917740498678, 2.146428108215332, -1.937484089528219, -1.5359357039081019, -0.38414270082582647)
+
+            if plan.joint_trajectory.points[-1].positions[0] > 0:
+                break
+            else:
+                print(f" !!!!!!!!!!!!!!!! Planining Fail !!!!!!!!!!!!!!!!")
+                print(f"adding z coordinate :{af_offset_tf[2,3] + num}")
+                num += 0.001
+
 
         display_trajectory = moveit_msgs.msg.DisplayTrajectory()
         display_trajectory.trajectory_start = robot.get_current_state()
@@ -479,14 +580,19 @@ class RobotPickPlace:
 pickplace = RobotPickPlace()
 
 pcd_model_eraser = o3d.io.read_point_cloud("/home/oongking/RobotArm_ws/src/model3d/script/buildModel/Data/eraser/eraser.pcd")
+eraser_long_size = 0.038
+eraser_point_num = 700
+
 pcd_model_shampoo = o3d.io.read_point_cloud("/home/oongking/RobotArm_ws/src/model3d/script/buildModel/Data/shampoo/shampoo.pcd")
+shampoo_long_size = 0.085
+shampoo_point_num = 3800
 
 while not rospy.is_shutdown():
 
     print("=================================================================================")
     print("\n:: Preview Key command ::\n\ta : Preview ArUco board\n\tc : Preview Robotpose\n\tu : Preview Alu Process"+
-            "\n\n:: Setup Config Key command ::\n\ts : Set Cam Workspace"+
-            "\n\n:: Alu Process Key command ::\n\tt : Full Single Alu Capture Process\n\ty : Full Multi Alu Capture Process")
+            "\n\n:: Alu Process Key command ::\n\tt : Full Single Alu Capture Process\n\ty : Full Multi Alu Capture Process"+
+            "\n\n:: Setup Config Key command ::\n\ts : Set Cam Workspace\n\td : Use Pre-Cam Workspace\n\te : Close Program")
     key = getch.getch().lower()
     print("key : ",key)
 
@@ -547,7 +653,12 @@ while not rospy.is_shutdown():
     if key == 's': # Set Cam Workspace
         rgb_image, depth_image = cam.get_rgbd()
         Ar_tfm = workspace_ar_set(rgb_image, camera = cam_type, show = False)
+        np.savetxt('/home/oongking/RobotArm_ws/src/bin_picking/script/workspace_pose.txt', Ar_tfm, delimiter=',',header='real_workspacepose Pose')
         pickplace.set_cam_box(Ar_tfm)
+
+    if key == 'd': # Use Pre-Cam Workspace
+        ws_tf = np.loadtxt('/home/oongking/RobotArm_ws/src/bin_picking/script/workspace_pose.txt',delimiter=',')
+        pickplace.set_cam_box(ws_tf)
 
 
 
@@ -624,10 +735,10 @@ while not rospy.is_shutdown():
 
             pcd = cam.buildPCD()
             crop_pcd = pcd.crop(pickplace.cam_box)
-            crop_pcd.transform(inv_tf)
+
             print(np.asarray(crop_pcd.points).shape[0])
 
-            # o3d.visualization.draw_geometries([crop_pcd,Realcoor])
+            o3d.visualization.draw_geometries([crop_pcd,Realcoor])
             if np.asarray(crop_pcd.points).shape[0]>200:
                 
                 group_model = crop_pcd.voxel_down_sample(voxel_size=0.001)
@@ -635,13 +746,173 @@ while not rospy.is_shutdown():
     
                 volume,pcds = Cluster(group_model)
 
-                obj_tf,fitnesses = obj_pose_estimate(pcd_model_shampoo,pcds,point_p_obj = 4000)
+                obj_tf,fitnesses = obj_pose_estimate(pcd_model_shampoo,pcds,point_p_obj = shampoo_point_num, show = False, lowest_fitness = 0.35)
                 obj_coor = coordinates(obj_tf)
 
-                o3d.visualization.draw_geometries([ws_coor,Realcoor,pcd_env,ws_box,pcd_model_shampoo]+obj_coor)
+                o3d.visualization.draw_geometries([Realcoor,pcd,pickplace.cam_box,pcd_model_shampoo]+obj_coor)
 
+                for i,tf_obj in enumerate(obj_tf):
+                    obj_tf[i] = np.matmul(inv_tf,tf_obj)
+                
+                if obj_tf == []:
+                    print(" Not Enough Confident value")
+                    pickplace.common_Arm('prepick')
+                    break
+                go_pick_tf = choose_pick_axis(obj_tf[0],model_offset = shampoo_long_size, pick_offset_z = 0.01)
+
+                # go_pick_coors = coordinates(go_pick_tf)
+
+                objcoor1 = o3d.geometry.TriangleMesh.create_coordinate_frame(0.05,[0,0,0])
+                objcoor1.rotate(obj_tf[0][:3, :3],(0,0,0))
+                objcoor1.translate(np.asarray(obj_tf[0][:3,3],dtype=np.float64),relative=True)
+
+                objcoor = o3d.geometry.TriangleMesh.create_coordinate_frame(0.05,[0,0,0])
+                objcoor.rotate(go_pick_tf[:3, :3],(0,0,0))
+                objcoor.translate(np.asarray(go_pick_tf[:3,3],dtype=np.float64),relative=True)
+
+                crop_pcd.transform(inv_tf)
+                o3d.visualization.draw_geometries([Realcoor,crop_pcd,objcoor,objcoor1])
+                
                 ############ multi capture process ############
+                pickplace.pick_orien_multi_process(go_pick_tf,obj_name = 'shampoo')
+                
+            else:
+                pickplace.common_Arm('prepick')
+                break
+        
+    ### =========== Eraser Process =========== ###
 
+    if key == 'n': # Full Multi Eraser Capture Process
+        pickplace.place_order = 0
+        Realcoor = o3d.geometry.TriangleMesh.create_coordinate_frame(0.1,(0,0,0))
+        RobotBaseCoor = o3d.geometry.TriangleMesh.create_coordinate_frame(0.1,(0,0,0))
+        RobotBaseCoor.transform(pickplace.get_robot_pose())
+        inv_tf = np.linalg.inv(pickplace.get_robot_pose())
+
+        while True:
+
+            pcd = cam.buildPCD()
+            crop_pcd = pcd.crop(pickplace.cam_box)
+
+            print(np.asarray(crop_pcd.points).shape[0])
+
+            o3d.visualization.draw_geometries([crop_pcd,Realcoor])
+            if np.asarray(crop_pcd.points).shape[0]>200:
+                
+                group_model = crop_pcd.voxel_down_sample(voxel_size=0.001)
+                group_model, ind = group_model.remove_statistical_outlier(nb_neighbors=50, std_ratio=1.0)
+    
+                volume,pcds = Cluster(group_model)
+
+                obj_tf,fitnesses = obj_pose_estimate(pcd_model_eraser,pcds,point_p_obj = eraser_point_num, show = False, lowest_fitness = 0.35)
+                obj_coor = coordinates(obj_tf)
+
+                o3d.visualization.draw_geometries([Realcoor,pcd,pickplace.cam_box,pcd_model_eraser]+obj_coor)
+
+                for i,tf_obj in enumerate(obj_tf):
+                    obj_tf[i] = np.matmul(inv_tf,tf_obj)
+                
+                if obj_tf == []:
+                    print(" Not Enough Confident value")
+                    pickplace.common_Arm('prepick')
+                    break
+                go_pick_tf = choose_pick_axis(obj_tf[0],model_offset = eraser_long_size, pick_offset_z = 0.0)
+
+                # go_pick_coors = coordinates(go_pick_tf)
+
+                objcoor1 = o3d.geometry.TriangleMesh.create_coordinate_frame(0.05,[0,0,0])
+                objcoor1.rotate(obj_tf[0][:3, :3],(0,0,0))
+                objcoor1.translate(np.asarray(obj_tf[0][:3,3],dtype=np.float64),relative=True)
+
+                objcoor = o3d.geometry.TriangleMesh.create_coordinate_frame(0.05,[0,0,0])
+                objcoor.rotate(go_pick_tf[:3, :3],(0,0,0))
+                objcoor.translate(np.asarray(go_pick_tf[:3,3],dtype=np.float64),relative=True)
+
+                crop_pcd.transform(inv_tf)
+                o3d.visualization.draw_geometries([Realcoor,crop_pcd,objcoor,objcoor1])
+                
+                ############ multi capture process ############
+                pickplace.pick_orien_multi_process(go_pick_tf,obj_name = 'eraser')
+                
+            else:
+                pickplace.common_Arm('prepick')
+                break
+
+    ### =========== Eraser && Shampoo Process =========== ###
+
+    if key == 'm': # Full Multi Eraser && Shampoo Capture Process
+        pickplace.place_order = 0
+        Realcoor = o3d.geometry.TriangleMesh.create_coordinate_frame(0.1,(0,0,0))
+        RobotBaseCoor = o3d.geometry.TriangleMesh.create_coordinate_frame(0.1,(0,0,0))
+        RobotBaseCoor.transform(pickplace.get_robot_pose())
+        inv_tf = np.linalg.inv(pickplace.get_robot_pose())
+
+        while True:
+
+            pcd = cam.buildPCD()
+            crop_pcd = pcd.crop(pickplace.cam_box)
+
+            print(np.asarray(crop_pcd.points).shape[0])
+
+            o3d.visualization.draw_geometries([crop_pcd,Realcoor])
+            if np.asarray(crop_pcd.points).shape[0]>200:
+                
+                group_model = crop_pcd.voxel_down_sample(voxel_size=0.001)
+                group_model, ind = group_model.remove_statistical_outlier(nb_neighbors=50, std_ratio=1.0)
+    
+                volume,pcds = Cluster(group_model)
+
+                eraser_obj_tf,eraser_fitnesses = obj_pose_estimate(pcd_model_eraser,pcds,point_p_obj = eraser_point_num, show = False, lowest_fitness = 0.38)
+                eraser_obj_coor = coordinates(eraser_obj_tf, size = 0.03)
+
+                shampo_obj_tf,shampo_fitnesses = obj_pose_estimate(pcd_model_shampoo,pcds,point_p_obj = shampoo_point_num, show = False, lowest_fitness = 0.35)
+                shampo_obj_coor = coordinates(shampo_obj_tf)
+                
+                o3d.visualization.draw_geometries([Realcoor,pcd,pickplace.cam_box]+eraser_obj_coor+shampo_obj_coor)
+
+                
+                pick_obj_name = ''
+                if eraser_fitnesses != [] and shampo_fitnesses !=[]:
+                    if eraser_fitnesses[0] > shampo_fitnesses[0]:
+                        obj_tf = eraser_obj_tf
+                        pick_obj_name = 'eraser'
+                    else:
+                        obj_tf = shampo_obj_coor
+                        pick_obj_name = 'shampoo'
+                elif eraser_fitnesses == []:
+                    obj_tf = shampo_obj_coor
+                    pick_obj_name = 'shampoo'
+
+                elif shampo_fitnesses == []:
+                    obj_tf = eraser_obj_tf
+                    pick_obj_name = 'eraser'
+
+
+                for i,tf_obj in enumerate(obj_tf):
+                    obj_tf[i] = np.matmul(inv_tf,tf_obj)
+                
+                if obj_tf == []:
+                    print(" Not Enough Confident value")
+                    pickplace.common_Arm('prepick')
+                    break
+                go_pick_tf = choose_pick_axis(obj_tf[0],model_offset = eraser_long_size, pick_offset_z = 0.0)
+
+                # go_pick_coors = coordinates(go_pick_tf)
+
+                objcoor1 = o3d.geometry.TriangleMesh.create_coordinate_frame(0.05,[0,0,0])
+                objcoor1.rotate(obj_tf[0][:3, :3],(0,0,0))
+                objcoor1.translate(np.asarray(obj_tf[0][:3,3],dtype=np.float64),relative=True)
+
+                objcoor = o3d.geometry.TriangleMesh.create_coordinate_frame(0.05,[0,0,0])
+                objcoor.rotate(go_pick_tf[:3, :3],(0,0,0))
+                objcoor.translate(np.asarray(go_pick_tf[:3,3],dtype=np.float64),relative=True)
+
+                crop_pcd.transform(inv_tf)
+                o3d.visualization.draw_geometries([Realcoor,crop_pcd,objcoor,objcoor1])
+                
+                ############ multi capture process ############
+                pickplace.pick_orien_multi_process(go_pick_tf,obj_name = pick_obj_name)
+                
             else:
                 pickplace.common_Arm('prepick')
                 break
