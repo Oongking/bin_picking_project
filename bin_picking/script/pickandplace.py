@@ -349,7 +349,15 @@ class RobotPickPlace:
     
     def pick_orien_multi_process(self,obj_tf,obj_name = 'shampoo'):
         rospy.loginfo(":: Pick Process ::")
-        self.common_Gripper('full_open')
+
+        if obj_name == 'shampoo':
+            release_type = 'full_open'
+        if obj_name == 'eraser':
+            release_type = 'half_open'
+
+
+        self.common_Gripper(release_type)
+
         self.common_Arm('prepick')
 
         pre_pick_pos = np.eye(4)
@@ -375,10 +383,7 @@ class RobotPickPlace:
         rotation = np.eye(4)
         rotation[:3,:3] = Ry(90)
         self.control_plannar_arm([0.3,0,0.15],rotation)
-        if obj_name == 'shampoo':
-            self.place_inorder(release_type = 'full_open')
-        if obj_name == 'eraser':
-            self.place_inorder(release_type = 'half_open')
+        self.place_inorder(release_type = release_type)
 
 
     def place_inorder(self, release_type = 'release_open'):
@@ -586,12 +591,16 @@ eraser_point_num = 700
 pcd_model_shampoo = o3d.io.read_point_cloud("/home/oongking/RobotArm_ws/src/model3d/script/buildModel/Data/shampoo/shampoo.pcd")
 shampoo_long_size = 0.085
 shampoo_point_num = 3800
+Realcoor = o3d.geometry.TriangleMesh.create_coordinate_frame(0.05,(0,0,0))
 
 while not rospy.is_shutdown():
 
     print("=================================================================================")
     print("\n:: Preview Key command ::\n\ta : Preview ArUco board\n\tc : Preview Robotpose\n\tu : Preview Alu Process"+
             "\n\n:: Alu Process Key command ::\n\tt : Full Single Alu Capture Process\n\ty : Full Multi Alu Capture Process"+
+            "\n\n:: Shampoo Process Key command ::\n\th : Full Multi Shampoo Capture Process"+
+            "\n\n:: Eraser Process Key command ::\n\tn : Full Multi Eraser Capture Process"+
+            "\n\n:: Shampoo & Eraser Process Key command ::\n\tm : Full Multi Eraser && Shampoo Capture Process"+
             "\n\n:: Setup Config Key command ::\n\ts : Set Cam Workspace\n\td : Use Pre-Cam Workspace\n\te : Close Program")
     key = getch.getch().lower()
     print("key : ",key)

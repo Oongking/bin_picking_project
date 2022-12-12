@@ -313,9 +313,9 @@ class ServoJoy:
             ymove = 0.0
         # z
         if status.L2:
-            zmove = -0.2
-        elif status.R2:
             zmove = 0.2
+        elif status.R2:
+            zmove = -0.2
         else:
             zmove = 0.0
         
@@ -362,9 +362,9 @@ class ServoJoy:
             ymove = 0.0
         # z
         if status.L2:
-            zmove = -0.2
-        elif status.R2:
             zmove = 0.2
+        elif status.R2:
+            zmove = -0.2
         else:
             zmove = 0.0
         
@@ -436,6 +436,9 @@ class ServoJoy:
         if status.cross == 1:
             command = self.genCommand('release_open')
             self.gripperpub.publish(command)
+        if status.square == 1:
+            command = self.genCommand('half_open')
+            self.gripperpub.publish(command)
 
         # placement.time_from_start = now - self.prev_time
         if (now - self.prev_time).to_sec() > 1 / 100.0:
@@ -450,21 +453,21 @@ class ServoJoy:
             command = outputMsg.Robotiq2FGripper_robot_output()
             command.rACT = 1
             command.rGTO = 1
-            command.rSP  = 255 # speed
+            command.rSP  = 125 # speed
             command.rFR  = 5 # Force
 
         if keyword == 'reset':
             command = outputMsg.Robotiq2FGripper_robot_output()
             command.rACT = 0
             command.rGTO = 1
-            command.rSP  = 255 # speed
+            command.rSP  = 125 # speed
             command.rFR  = 5 # Force
 
         if keyword == 'close':
             command = outputMsg.Robotiq2FGripper_robot_output()
             command.rACT = 1
             command.rGTO = 1
-            command.rSP  = 255 # speed
+            command.rSP  = 125 # speed
             command.rFR  = 5 # Force
 
             command.rPR = 255
@@ -473,7 +476,7 @@ class ServoJoy:
             command = outputMsg.Robotiq2FGripper_robot_output()
             command.rACT = 1
             command.rGTO = 1
-            command.rSP  = 255 # speed
+            command.rSP  = 125 # speed
             command.rFR  = 5 # Force
 
             command.rPR = 0
@@ -482,7 +485,7 @@ class ServoJoy:
             command = outputMsg.Robotiq2FGripper_robot_output()
             command.rACT = 1
             command.rGTO = 1
-            command.rSP  = 255 # speed
+            command.rSP  = 125 # speed
             command.rFR  = 5 # Force
 
             command.rPR = 127
@@ -491,7 +494,7 @@ class ServoJoy:
             command = outputMsg.Robotiq2FGripper_robot_output()
             command.rACT = 1
             command.rGTO = 1
-            command.rSP  = 255 # speed
+            command.rSP  = 125 # speed
             command.rFR  = 5 # Force
 
             command.rPR = 200
@@ -500,7 +503,7 @@ class ServoJoy:
             command = outputMsg.Robotiq2FGripper_robot_output()
             command.rACT = 1
             command.rGTO = 1
-            command.rSP  = 255 # speed
+            command.rSP  = 125 # speed
             command.rFR  = 5 # Force
 
             command.rPR = 250

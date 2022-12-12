@@ -302,9 +302,9 @@ class ServoJoy:
             ymove = 0.0
         # z
         if status.L2:
-            zmove = -move_speed_pos
-        elif status.R2:
             zmove = move_speed_pos
+        elif status.R2:
+            zmove = -move_speed_pos
         else:
             zmove = 0.0
         
