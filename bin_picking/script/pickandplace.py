@@ -813,7 +813,7 @@ while not rospy.is_shutdown():
     
                 volume,pcds = Cluster(group_model)
 
-                obj_tf,fitnesses = obj_pose_estimate(pcd_model_eraser,pcds,point_p_obj = eraser_point_num, show = False, lowest_fitness = 0.35)
+                obj_tf,fitnesses = obj_pose_estimate(pcd_model_eraser,pcds,point_p_obj = eraser_point_num, show = False, lowest_fitness = 0.32)
                 obj_coor = coordinates(obj_tf)
 
                 o3d.visualization.draw_geometries([Realcoor,pcd,pickplace.cam_box,pcd_model_eraser]+obj_coor)

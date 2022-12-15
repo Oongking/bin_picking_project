@@ -61,6 +61,32 @@ class JoyStatus:
         self.right_analog_x = 0.0
         self.right_analog_y = 0.0
 
+class RazeakStatus(JoyStatus):
+    def __init__(self, msg):
+        JoyStatus.__init__(self)
+
+        self.select = msg.buttons[8] == 1
+        self.start = msg.buttons[9] == 1
+        self.L3 = msg.buttons[10] == 1
+        self.R3 = msg.buttons[11] == 1
+        self.square = msg.buttons[3] == 1
+        self.circle = msg.buttons[1] == 1
+        self.up = msg.axes[5] > 0.1
+        self.down = msg.axes[5] < -0.1
+        self.left = msg.axes[4] > 0.1
+        self.right = msg.axes[4] < -0.1
+        self.triangle = msg.buttons[0] == 1
+        self.cross = msg.buttons[2] == 1
+        self.L1 = msg.buttons[4] == 1
+        self.R1 = msg.buttons[5] == 1
+        self.L2 = msg.buttons[6] == 1
+        self.R2 = msg.buttons[7] == 1
+        self.left_analog_x = msg.axes[0]
+        self.left_analog_y = msg.axes[1]
+        self.right_analog_x = msg.axes[2]
+        self.right_analog_y = msg.axes[3]
+        self.orig_msg = msg
+
 class NubwoStatus(JoyStatus):
     def __init__(self, msg):
         JoyStatus.__init__(self)
@@ -282,6 +308,8 @@ class ServoJoy:
             status = PS3DualShockStatus(msg)
         elif axes_amount == 7 and buttons_amount == 12:
             status = NubwoStatus(msg)
+        elif axes_amount == 6 and buttons_amount == 12:
+            status = RazeakStatus(msg)
         else:
             raise Exception(
                 "Unknown joystick, axes: {}, buttons: {}".format(
