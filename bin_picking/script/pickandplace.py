@@ -29,6 +29,8 @@ import time
 import copy
 import sys
 
+import actionlib
+from action_command.msg import *
 
 # Setup Moveit 
 moveit_commander.roscpp_initialize(sys.argv)
@@ -228,6 +230,9 @@ class RobotPickPlace:
             'grip_close' : [0.789465]
             # 'grip_close' : [0.8028]
             }
+
+        self.arm_client = actionlib.SimpleActionClient('go_place', Go_placeAction)
+        self.arm_client.wait_for_server()
         
         self.place_order = 0
     
@@ -348,6 +353,11 @@ class RobotPickPlace:
 
     
     def pick_orien_multi_process(self,obj_tf,obj_name = 'shampoo'):
+
+        if self.place_order > 0:
+            result = self.arm_client.wait_for_result()
+            # print(f" Wait Passssss {result}")
+
         rospy.loginfo(":: Pick Process ::")
 
         if obj_name == 'shampoo':
@@ -380,10 +390,29 @@ class RobotPickPlace:
         # place
         # self.control_plannar_arm((0.4,0.1,0.35),rotation)
         # self.common_Gripper('half_open')
+
+        # rotation = np.eye(4)
+        # rotation[:3,:3] = Ry(90)
+        # self.control_plannar_arm([0.3,0,0.15],rotation)
+        # self.place_inorder(release_type = release_type)
         rotation = np.eye(4)
         rotation[:3,:3] = Ry(90)
         self.control_plannar_arm([0.3,0,0.15],rotation)
-        self.place_inorder(release_type = release_type)
+
+        self.place_inorder_action(release_type = release_type)
+
+
+    def place_inorder_action(self, release_type = 'release_open'):
+        
+        goal = Go_placeGoal()
+        # Fill in the goal here
+        goal.pos_num = self.place_order
+        goal.release_type.data = release_type
+
+        self.arm_client.send_goal(goal)
+
+        self.place_order +=1
+        # rospy.loginfo(f":: Place_Order {self.place_order}:: \n pre_placepos : {pre_placepos}\n placepos : {placepos}")
 
 
     def place_inorder(self, release_type = 'release_open'):
@@ -492,11 +521,10 @@ class RobotPickPlace:
     def control_orien_arm(self,pos_tf):
 
         gripper_offset = np.eye(4)
-        gripper_offset[:3,3] = [-0.165,0,0]
+        gripper_offset[:3,3] = [-0.178,0,0]
 
         af_offset_tf = np.matmul(pos_tf,gripper_offset)
 
-        
         num = 0
         while True:
 
@@ -509,8 +537,13 @@ class RobotPickPlace:
             pose_goal.position.y = af_offset_tf[1,3]
             pose_goal.position.z = af_offset_tf[2,3] + num
             # print(f"pose_goal.position.z : {pose_goal.position.z}")
-            if pose_goal.position.z < 0.17:
-                pose_goal.position.z = 0.17
+            
+            # if pos_tf[2,3] < -0.005:
+            #     pose_goal.position.z = 0.17
+
+            # if pose_goal.position.z < 0.17:
+            #     print(f"pos_tf_z : {pos_tf[2,3]}")
+            #     pose_goal.position.z = 0.17
             
             orientation = tf.transformations.quaternion_from_matrix(af_offset_tf)
 
@@ -805,7 +838,7 @@ while not rospy.is_shutdown():
 
             print(np.asarray(crop_pcd.points).shape[0])
 
-            o3d.visualization.draw_geometries([crop_pcd,Realcoor])
+            # o3d.visualization.draw_geometries([crop_pcd,Realcoor])
             if np.asarray(crop_pcd.points).shape[0]>200:
                 
                 group_model = crop_pcd.voxel_down_sample(voxel_size=0.001)
@@ -816,12 +849,13 @@ while not rospy.is_shutdown():
                 obj_tf,fitnesses = obj_pose_estimate(pcd_model_eraser,pcds,point_p_obj = eraser_point_num, show = False, lowest_fitness = 0.32)
                 obj_coor = coordinates(obj_tf)
 
-                o3d.visualization.draw_geometries([Realcoor,pcd,pickplace.cam_box,pcd_model_eraser]+obj_coor)
+                # o3d.visualization.draw_geometries([Realcoor,pcd,pickplace.cam_box,pcd_model_eraser]+obj_coor)
 
                 for i,tf_obj in enumerate(obj_tf):
                     obj_tf[i] = np.matmul(inv_tf,tf_obj)
                 
                 if obj_tf == []:
+                    pickplace.arm_client.wait_for_result()
                     print(" Not Enough Confident value")
                     pickplace.common_Arm('prepick')
                     break
@@ -838,12 +872,13 @@ while not rospy.is_shutdown():
                 objcoor.translate(np.asarray(go_pick_tf[:3,3],dtype=np.float64),relative=True)
 
                 crop_pcd.transform(inv_tf)
-                o3d.visualization.draw_geometries([Realcoor,crop_pcd,objcoor,objcoor1])
+                # o3d.visualization.draw_geometries([Realcoor,crop_pcd,objcoor,objcoor1])
                 
                 ############ multi capture process ############
                 pickplace.pick_orien_multi_process(go_pick_tf,obj_name = 'eraser')
                 
             else:
+                pickplace.arm_client.wait_for_result()
                 pickplace.common_Arm('prepick')
                 break
 
@@ -923,6 +958,7 @@ while not rospy.is_shutdown():
                 pickplace.pick_orien_multi_process(go_pick_tf,obj_name = pick_obj_name)
                 
             else:
+
                 pickplace.common_Arm('prepick')
                 break
 

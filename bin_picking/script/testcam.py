@@ -53,7 +53,7 @@ while not rospy.is_shutdown():
     print("key : ",key)
 
     if key == 'c':
-        rgb_image, depth_image = cam.get_rgbd()
+        pcd,rgb_image, depth_image,make_pcd = cam.testMatrix()
         while not rospy.is_shutdown():
             cv2.imshow("rgb_image",rgb_image)
             cv2.imshow("depth_image",depth_image)
@@ -64,6 +64,7 @@ while not rospy.is_shutdown():
                 print("===== End =====")
                 print(depth_image)
                 cv2.destroyAllWindows()
+                o3d.visualization.draw_geometries([pcd,Realcoor])
                 break
 
     if key == 't':
@@ -92,10 +93,10 @@ while not rospy.is_shutdown():
             # print(f"u depth : {depth_image}")
         # print(f"max f depth: {np.max(depth_image)}")
         # print(f"max n depth: {np.max(depth_image.astype(np.uint16))}")
-        cv2.imwrite(f"{path}/{config}_rgb_img.png",rgb_image)
+        # cv2.imwrite(f"{path}/{config}_rgb_img.png",rgb_image)
         # cv2.imwrite(f"{path}/{config}_dep_img.png",depth_image*1000)
-        o3d.io.write_point_cloud(f"{path}/{config}_pcd_ros.pcd", pcd)
-        o3d.io.write_point_cloud(f"{path}/{config}_make_pcd.pcd", make_pcd)
+        # o3d.io.write_point_cloud(f"{path}/{config}_pcd_ros.pcd", pcd)
+        # o3d.io.write_point_cloud(f"{path}/{config}_make_pcd.pcd", make_pcd)
 
         # T_depth_image = cv2.imread(f'{path}/{config}_dep_img.png',cv2.IMREAD_ANYDEPTH) 
         # rgb_image = cv2.imread(f'{path}/{config}_rgb_img.png')

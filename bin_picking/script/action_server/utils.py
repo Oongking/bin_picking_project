@@ -809,8 +809,7 @@ def Cluster(pcd, Clus_eps=0.01, Clus_min_points=20, Out_nb_neighbors = 20, Out_s
             volume.append(box.volume())
             pcdcen.estimate_normals()
             pcds.append(pcdcen)
-    if volume != [] and pcds != []:
-        volume, pcds = zip(*sorted(zip(volume, pcds),reverse=True))
+    volume, pcds = zip(*sorted(zip(volume, pcds),reverse=True))
     volume = list(volume)
     pcds = list(pcds)
 
