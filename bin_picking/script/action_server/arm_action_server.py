@@ -57,7 +57,7 @@ class GoplaceServer:
     
     
 
-    print(f" goal : {goal.pos_num}")
+    print(f" #=#=#=#=#=#=#=#=#=#=#=# goal : {goal.pos_num}  #=#=#=#=#=#=#=#=#=#=#=# ")
 
     if goal.release_type.data == 'half_open':
 
@@ -156,7 +156,7 @@ if __name__ == '__main__':
   if cam_type  !='sim':
     pub = rospy.Publisher('Robotiq2FGripperRobotOutput', outputMsg.Robotiq2FGripper_robot_output)
     
-  control_speed = 1
+  control_speed = 0.4
   # ARM
   group_name = "manipulator"
   move_group = moveit_commander.MoveGroupCommander(group_name)
@@ -184,72 +184,5 @@ if __name__ == '__main__':
     group_gripper.set_max_velocity_scaling_factor(control_speed)
     group_gripper.set_max_acceleration_scaling_factor(control_speed)
       
-  else:
-    def genCommand(keyword):
-        """Update the command according to the character entered by the user."""
-
-        if keyword == 'activate':
-            command = outputMsg.Robotiq2FGripper_robot_output()
-            command.rACT = 1
-            command.rGTO = 1
-            command.rSP  = 255 # speed
-            command.rFR  = 5 # Force
-
-        if keyword == 'reset':
-            command = outputMsg.Robotiq2FGripper_robot_output()
-            command.rACT = 0
-            command.rGTO = 1
-            command.rSP  = 255 # speed
-            command.rFR  = 5 # Force
-
-        if keyword == 'close':
-            command = outputMsg.Robotiq2FGripper_robot_output()
-            command.rACT = 1
-            command.rGTO = 1
-            command.rSP  = 255 # speed
-            command.rFR  = 5 # Force
-
-            command.rPR = 255
-
-        if keyword == 'full_open':
-            command = outputMsg.Robotiq2FGripper_robot_output()
-            command.rACT = 1
-            command.rGTO = 1
-            command.rSP  = 255 # speed
-            command.rFR  = 5 # Force
-
-            command.rPR = 0
-
-        if keyword == 'half_open':
-            command = outputMsg.Robotiq2FGripper_robot_output()
-            command.rACT = 1
-            command.rGTO = 1
-            command.rSP  = 123 # speed
-            command.rFR  = 5 # Force
-
-            command.rPR = 127
-
-        if keyword == 'release_open':
-            command = outputMsg.Robotiq2FGripper_robot_output()
-            command.rACT = 1
-            command.rGTO = 1
-            command.rSP  = 255 # speed
-            command.rFR  = 5 # Force
-
-            command.rPR = 200
-
-        if keyword == 'grip_close':
-            command = outputMsg.Robotiq2FGripper_robot_output()
-            command.rACT = 1
-            command.rGTO = 1
-            command.rSP  = 255 # speed
-            command.rFR  = 5 # Force
-
-            command.rPR = 250
-
-        return command
-
-  
-
   server = GoplaceServer()
   rospy.spin()

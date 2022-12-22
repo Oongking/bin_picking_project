@@ -51,7 +51,7 @@ rate = rospy.Rate(10) # 10hz
 # Real
 # control_speed = 0.5
 # Sim
-control_speed = 1
+control_speed = 0.4
 # ARM
 group_name = "manipulator"
 move_group = moveit_commander.MoveGroupCommander(group_name)
@@ -79,106 +79,6 @@ if cam_type =='sim':
     group_gripper.set_max_velocity_scaling_factor(control_speed)
     group_gripper.set_max_acceleration_scaling_factor(control_speed)
     
-else:
-    def genCommand(keyword):
-        """Update the command according to the character entered by the user."""
-
-        if keyword == 'activate':
-            command = outputMsg.Robotiq2FGripper_robot_output()
-            command.rACT = 1
-            command.rGTO = 1
-            command.rSP  = 255 # speed
-            command.rFR  = 5 # Force
-
-        if keyword == 'reset':
-            command = outputMsg.Robotiq2FGripper_robot_output()
-            command.rACT = 0
-            command.rGTO = 1
-            command.rSP  = 255 # speed
-            command.rFR  = 5 # Force
-
-        if keyword == 'close':
-            command = outputMsg.Robotiq2FGripper_robot_output()
-            command.rACT = 1
-            command.rGTO = 1
-            command.rSP  = 255 # speed
-            command.rFR  = 5 # Force
-
-            command.rPR = 255
-
-        if keyword == 'full_open':
-            command = outputMsg.Robotiq2FGripper_robot_output()
-            command.rACT = 1
-            command.rGTO = 1
-            command.rSP  = 255 # speed
-            command.rFR  = 5 # Force
-
-            command.rPR = 0
-
-        if keyword == 'half_open':
-            command = outputMsg.Robotiq2FGripper_robot_output()
-            command.rACT = 1
-            command.rGTO = 1
-            command.rSP  = 123 # speed
-            command.rFR  = 5 # Force
-
-            command.rPR = 127
-
-        if keyword == 'release_open':
-            command = outputMsg.Robotiq2FGripper_robot_output()
-            command.rACT = 1
-            command.rGTO = 1
-            command.rSP  = 255 # speed
-            command.rFR  = 5 # Force
-
-            command.rPR = 200
-
-        if keyword == 'grip_close':
-            command = outputMsg.Robotiq2FGripper_robot_output()
-            command.rACT = 1
-            command.rGTO = 1
-            command.rSP  = 255 # speed
-            command.rFR  = 5 # Force
-
-            command.rPR = 250
-
-
-        #If the command entered is a int, assign this value to rPRA
-        # try:
-        #     command.rPR = int(keyword)
-        #     if command.rPR > 255:
-        #         command.rPR = 255
-        #     if command.rPR < 0:
-        #         command.rPR = 0
-        # except ValueError:
-        #     pass
-
-            # Speed control
-        # if keyword == 'f':
-        #     command.rSP += 25
-        #     if command.rSP > 255:
-        #         command.rSP = 255
-        # if keyword == 'l':
-        #     command.rSP -= 25
-        #     if command.rSP < 0:
-        #         command.rSP = 0
-            # Force control
-        # if keyword == 'i':
-        #     command.rFR += 25
-        #     if command.rFR > 255:
-        #         command.rFR = 255
-        # if keyword == 'd':
-        #     command.rFR -= 25
-        #     if command.rFR < 0:
-        #         command.rFR = 0
-
-        return command
-
-    # command = genCommand('activate', command)
-    # pub.publish(command)
-    # rospy.sleep(0.1)
-
-
 # Constant Variable
 D2R = np.pi/180
 R2D = 180/np.pi
@@ -619,7 +519,7 @@ pickplace = RobotPickPlace()
 
 pcd_model_eraser = o3d.io.read_point_cloud("/home/oongking/RobotArm_ws/src/model3d/script/buildModel/Data/eraser/eraser.pcd")
 eraser_long_size = 0.038
-eraser_point_num = 700
+eraser_point_num = 650
 
 pcd_model_shampoo = o3d.io.read_point_cloud("/home/oongking/RobotArm_ws/src/model3d/script/buildModel/Data/shampoo/shampoo.pcd")
 shampoo_long_size = 0.085
@@ -643,13 +543,18 @@ while not rospy.is_shutdown():
     ### =========== Preview =========== ###
 
     if key == 'a': # Preview Alu Process
-        rgb_image, depth_image, pcd_env = cam.capture()
-        Ar_tfm = workspace_ar_set(rgb_image, camera = cam_type, show = True)
+        pcd, rgb_image, depth_image, pcd_env = cam.testMatrix()
+        Ar_tfm,Ar_image = workspace_ar_set(rgb_image, camera = cam_type, show = True)
+        # cv2.imwrite(f"/home/oongking/RobotArm_ws/src/bin_picking/docs/ar_rgb_img.png",rgb_image)
+
+        RobotBaseCoor = o3d.geometry.TriangleMesh.create_coordinate_frame(0.1,(0,0,0))
+        RobotBaseCoor.transform(pickplace.get_robot_pose())
+
         ws_box = fixbox(Ar_tfm[:3, :3],Ar_tfm[:3,3],0, x = 0.3, y = 0.3, z = 0.1)
         ws_coor = o3d.geometry.TriangleMesh.create_coordinate_frame(0.05,(0,0,0))
         ws_coor.rotate(Ar_tfm[:3, :3],(0,0,0))
         ws_coor.translate(np.asarray(Ar_tfm[:3,3],dtype=np.float64),relative=True)
-        o3d.visualization.draw_geometries([ws_coor,Realcoor,pcd_env,ws_box])
+        o3d.visualization.draw_geometries([RobotBaseCoor,ws_coor,Realcoor,pcd_env,ws_box])
 
     if key == 'c': # Preview Robotpose
         pickplace.reload()
@@ -694,7 +599,7 @@ while not rospy.is_shutdown():
 
     if key == 's': # Set Cam Workspace
         rgb_image, depth_image = cam.get_rgbd()
-        Ar_tfm = workspace_ar_set(rgb_image, camera = cam_type, show = False)
+        Ar_tfm,Ar_image = workspace_ar_set(rgb_image, camera = cam_type, show = False)
         np.savetxt('/home/oongking/RobotArm_ws/src/bin_picking/script/workspace_pose.txt', Ar_tfm, delimiter=',',header='real_workspacepose Pose')
         pickplace.set_cam_box(Ar_tfm)
 
@@ -855,10 +760,10 @@ while not rospy.is_shutdown():
                     obj_tf[i] = np.matmul(inv_tf,tf_obj)
                 
                 if obj_tf == []:
-                    pickplace.arm_client.wait_for_result()
+                    # pickplace.arm_client.wait_for_result()
                     print(" Not Enough Confident value")
-                    pickplace.common_Arm('prepick')
-                    break
+                    # pickplace.common_Arm('prepick')
+                    continue
                 go_pick_tf = choose_pick_axis(obj_tf[0],model_offset = eraser_long_size, pick_offset_z = 0.0)
 
                 # go_pick_coors = coordinates(go_pick_tf)

@@ -274,6 +274,8 @@ class ServoJoy:
     def __init__(self):
         self.prev_time = rospy.Time.now()
         self.InvertmodeTime = rospy.Time.now()
+        self.SpeedmodeTime = rospy.Time.now()
+
 
         self.pub = rospy.Publisher("/servo_server/delta_twist_cmds", TwistStamped, queue_size=10)  # Publisher object which will publish "Twist" type messages
                                                     # on the "/cmd_vel" Topic, "queue_size" is the size of the
@@ -283,11 +285,19 @@ class ServoJoy:
         self.subjoint = rospy.Subscriber("/joint_group_position_controller/command", Float64MultiArray, self.sent2Ur, queue_size=1)
         self.sub = rospy.Subscriber("/joy", Joy, self.joyCB, queue_size=1)
         self.Invertmove = False
+        self.Speedmove = False
         
         self.gripperpub = rospy.Publisher('Robotiq2FGripperRobotOutput', outputMsg.Robotiq2FGripper_robot_output, queue_size=1)
     
     def sent2Ur(self, msg):
-        goal = f"movel([{msg.data[0]},{msg.data[1]},{msg.data[2]},{msg.data[3]},{msg.data[4]},{msg.data[5]}], a=5, v=0.25, t=0, r=0)"
+        
+        if not self.Speedmove:
+            # rospy.loginfo(" Slow Mode ")
+            goal = f"movel([{msg.data[0]},{msg.data[1]},{msg.data[2]},{msg.data[3]},{msg.data[4]},{msg.data[5]}], a=5, v=1.0, t=0, r=0)"
+        else:
+            # rospy.loginfo(" Speed Mode ")
+            goal = f"movel([{msg.data[0]},{msg.data[1]},{msg.data[2]},{msg.data[3]},{msg.data[4]},{msg.data[5]}], a=8, v=1.0, t=0, r=0)"
+
         # print(goal)
         self.pub2Ur.publish(goal)
 
@@ -442,11 +452,21 @@ class ServoJoy:
             if (now - self.InvertmodeTime).to_sec() > 0.5:
                 self.Invertmove = not self.Invertmove
             self.InvertmodeTime = now
-            print(f"state {self.Invertmove}")
+            print(f"Invert state {self.Invertmove}")
             if not self.Invertmove:
                 rospy.loginfo(" Cartesian Mode ")
             else:
                 rospy.loginfo(" Invert Mode ")
+            
+        if status.circle == 1:
+            if (now - self.SpeedmodeTime).to_sec() > 0.5:
+                self.Speedmove = not self.Speedmove
+            self.SpeedmodeTime = now
+            print(f"Speed state {self.Speedmove}")
+            if not self.Speedmove:
+                rospy.loginfo(" Slow Mode ")
+            else:
+                rospy.loginfo(" Speed Mode ")
         
         # gripper control
         if status.select == 1 :
@@ -469,7 +489,7 @@ class ServoJoy:
             self.gripperpub.publish(command)
 
         # placement.time_from_start = now - self.prev_time
-        if (now - self.prev_time).to_sec() > 1 / 100.0:
+        if (now - self.prev_time).to_sec() > 1 / 1000.0:
             # rospy.loginfo(new_pose)
             self.pub.publish(move)
             self.prev_time = now

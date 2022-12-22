@@ -1,0 +1,6 @@
+<launch>
+  
+  <node pkg="bin_picking" type="arm_action_server.py" output="screen" name="Action_Server"/>
+  <node pkg="bin_picking" type="pickandplace.py" output="screen" name="pickandplace"/>
+
+</launch>

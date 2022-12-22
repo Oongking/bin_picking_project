@@ -19,6 +19,10 @@ from ctypes import * # convert float to uint32
 import dynamic_reconfigure.client
 from zivid_camera.srv import *
 
+# Gripper
+import roslib; roslib.load_manifest('robotiq_2f_gripper_control')
+from robotiq_2f_gripper_control.msg import _Robotiq2FGripper_robot_output  as outputMsg
+
 # Image
 import cv2
 
@@ -809,7 +813,8 @@ def Cluster(pcd, Clus_eps=0.01, Clus_min_points=20, Out_nb_neighbors = 20, Out_s
             volume.append(box.volume())
             pcdcen.estimate_normals()
             pcds.append(pcdcen)
-    volume, pcds = zip(*sorted(zip(volume, pcds),reverse=True))
+    if volume != [] and pcds != []:
+        volume, pcds = zip(*sorted(zip(volume, pcds),reverse=True))
     volume = list(volume)
     pcds = list(pcds)
 
@@ -982,5 +987,97 @@ def choose_pick_axis(obj_tf, model_offset = 0.0, pick_offset_z = 0.0):
     return np.matmul(obj_tf,pick_tf)
     
 
+def genCommand(keyword):
+        """Update the command according to the character entered by the user."""
 
+        if keyword == 'activate':
+            command = outputMsg.Robotiq2FGripper_robot_output()
+            command.rACT = 1
+            command.rGTO = 1
+            command.rSP  = 255 # speed
+            command.rFR  = 5 # Force
+
+        if keyword == 'reset':
+            command = outputMsg.Robotiq2FGripper_robot_output()
+            command.rACT = 0
+            command.rGTO = 1
+            command.rSP  = 255 # speed
+            command.rFR  = 5 # Force
+
+        if keyword == 'close':
+            command = outputMsg.Robotiq2FGripper_robot_output()
+            command.rACT = 1
+            command.rGTO = 1
+            command.rSP  = 255 # speed
+            command.rFR  = 5 # Force
+
+            command.rPR = 255
+
+        if keyword == 'full_open':
+            command = outputMsg.Robotiq2FGripper_robot_output()
+            command.rACT = 1
+            command.rGTO = 1
+            command.rSP  = 255 # speed
+            command.rFR  = 5 # Force
+
+            command.rPR = 0
+
+        if keyword == 'half_open':
+            command = outputMsg.Robotiq2FGripper_robot_output()
+            command.rACT = 1
+            command.rGTO = 1
+            command.rSP  = 123 # speed
+            command.rFR  = 5 # Force
+
+            command.rPR = 127
+
+        if keyword == 'release_open':
+            command = outputMsg.Robotiq2FGripper_robot_output()
+            command.rACT = 1
+            command.rGTO = 1
+            command.rSP  = 255 # speed
+            command.rFR  = 5 # Force
+
+            command.rPR = 200
+
+        if keyword == 'grip_close':
+            command = outputMsg.Robotiq2FGripper_robot_output()
+            command.rACT = 1
+            command.rGTO = 1
+            command.rSP  = 255 # speed
+            command.rFR  = 5 # Force
+
+            command.rPR = 250
+
+
+        #If the command entered is a int, assign this value to rPRA
+        # try:
+        #     command.rPR = int(keyword)
+        #     if command.rPR > 255:
+        #         command.rPR = 255
+        #     if command.rPR < 0:
+        #         command.rPR = 0
+        # except ValueError:
+        #     pass
+
+            # Speed control
+        # if keyword == 'f':
+        #     command.rSP += 25
+        #     if command.rSP > 255:
+        #         command.rSP = 255
+        # if keyword == 'l':
+        #     command.rSP -= 25
+        #     if command.rSP < 0:
+        #         command.rSP = 0
+            # Force control
+        # if keyword == 'i':
+        #     command.rFR += 25
+        #     if command.rFR > 255:
+        #         command.rFR = 255
+        # if keyword == 'd':
+        #     command.rFR -= 25
+        #     if command.rFR < 0:
+        #         command.rFR = 0
+
+        return command
 
