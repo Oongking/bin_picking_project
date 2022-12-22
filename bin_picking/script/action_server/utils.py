@@ -212,7 +212,7 @@ class Azure_cam():
             print(e)
 
     def convertCloudFromRosToOpen3d(self):
-        print(":: convertCloudFromRosToOpen3d ::")
+        # print(":: convertCloudFromRosToOpen3d ::")
         open3d_cloud = o3d.geometry.PointCloud()
         if self.received_ros_cloud is not None:
             # Get cloud data from ros_cloud
@@ -413,7 +413,7 @@ class zivid_cam():
                 print(e)
 
     def convertCloudFromRosToOpen3d(self):
-        print(":: convertCloudFromRosToOpen3d ::")
+        # print(":: convertCloudFromRosToOpen3d ::")
         open3d_cloud = o3d.geometry.PointCloud()
         if self.received_ros_cloud is not None:
             # Get cloud data from ros_cloud
@@ -534,7 +534,7 @@ class sim_cam():
             print(e)
 
     def convertCloudFromRosToOpen3d(self):
-        print(":: convertCloudFromRosToOpen3d ::")
+        # print(":: convertCloudFromRosToOpen3d ::")
         open3d_cloud = o3d.geometry.PointCloud()
         if self.received_ros_cloud is not None:
             # Get cloud data from ros_cloud
@@ -863,7 +863,7 @@ def workspace_ar_set(rgb_image, camera = 'zivid', show = False):
                 cv2.destroyAllWindows()
                 break
     
-    return transformation_matrix
+    return transformation_matrix,rgb_image
 
 def obj_pose_estimate(pcd_model,pcds,point_p_obj = 4000, show = False, lowest_fitness = 0.38):
     obj_cluster = []
@@ -889,7 +889,7 @@ def obj_pose_estimate(pcd_model,pcds,point_p_obj = 4000, show = False, lowest_fi
     for obj in obj_cluster:
         icp = icp_pose_estimate(pcd_model,obj,t_down= False)
         tfm,fitness = icp.estimate()
-        
+
         if fitness > lowest_fitness:
             fitnesses.append(fitness)
             obj_tf.append(tfm)
