@@ -1022,6 +1022,15 @@ def genCommand(keyword):
 
             command.rPR = 0
 
+        if keyword == 'quarter_open':
+            command = outputMsg.Robotiq2FGripper_robot_output()
+            command.rACT = 1
+            command.rGTO = 1
+            command.rSP  = 123 # speed
+            command.rFR  = 5 # Force
+
+            command.rPR = 150
+
         if keyword == 'half_open':
             command = outputMsg.Robotiq2FGripper_robot_output()
             command.rACT = 1

@@ -59,7 +59,7 @@ class GoplaceServer:
 
     print(f" #=#=#=#=#=#=#=#=#=#=#=# goal : {goal.pos_num}  #=#=#=#=#=#=#=#=#=#=#=# ")
 
-    if goal.release_type.data == 'half_open':
+    if goal.release_type.data == 'quarter_open' or goal.release_type.data == 'half_open':
 
       upoffset = np.floor(goal.pos_num/5).astype(int)
       start_prepos = np.array([0.171,-0.151,0.1])

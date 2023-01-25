@@ -125,6 +125,7 @@ class RobotPickPlace:
             'up' : [0, -1.5707, 0, -1.5707, 0, 0],
             'full_open' : [0],
             'half_open' : [0.4],
+            'quarter_open' : [0.6],
             'release_open' : [0.7],
             'close' : [0.8028],
             'grip_close' : [0.789465]
@@ -263,7 +264,7 @@ class RobotPickPlace:
         if obj_name == 'shampoo':
             release_type = 'full_open'
         if obj_name == 'eraser':
-            release_type = 'half_open'
+            release_type = 'quarter_open'
 
 
         self.common_Gripper(release_type)
@@ -283,7 +284,7 @@ class RobotPickPlace:
         # obj_coor = coordinate(obj_tf, size = 0.03)
         # o3d.visualization.draw_geometries([Realcoor,crop_pcd,objcoor1,obj_coor])
         self.control_orien_arm(obj_tf)
-        self.common_Gripper('grip_close')
+        self.common_Gripper('release_open')
         self.control_orien_arm(pre_pick_tf)
         rospy.sleep(1.)
 
@@ -730,6 +731,7 @@ while not rospy.is_shutdown():
     ### =========== Eraser Process =========== ###
 
     if key == 'n': # Full Multi Eraser Capture Process
+        starttime = rospy.Time.now()
         pickplace.place_order = 0
         Realcoor = o3d.geometry.TriangleMesh.create_coordinate_frame(0.1,(0,0,0))
         RobotBaseCoor = o3d.geometry.TriangleMesh.create_coordinate_frame(0.1,(0,0,0))
@@ -786,6 +788,9 @@ while not rospy.is_shutdown():
                 pickplace.arm_client.wait_for_result()
                 pickplace.common_Arm('prepick')
                 break
+
+        timenow = rospy.Time.from_sec(time.time())
+        print(f":: Process time : {(timenow - starttime).to_sec()}")
 
     ### =========== Eraser && Shampoo Process =========== ###
 
