@@ -865,7 +865,7 @@ def workspace_ar_set(rgb_image, camera = 'zivid', show = False):
     
     return transformation_matrix,rgb_image
 
-def obj_pose_estimate(pcd_model,pcds,point_p_obj = 4000, show = False, lowest_fitness = 0.38):
+def obj_pose_estimate(pcd_model,pcds,point_p_obj = 4000, show = False, lowest_fitness = 0.38, process_fitness = 0.40):
     obj_cluster = []
     for pcd in pcds:
         num_obj = np.trunc(len(pcd.points)/point_p_obj).astype(int)
@@ -895,6 +895,9 @@ def obj_pose_estimate(pcd_model,pcds,point_p_obj = 4000, show = False, lowest_fi
             obj_tf.append(tfm)
 
         if show:draw_registration_result(pcd_model, obj, tfm)
+
+        if fitness > process_fitness:
+            break
 
     if fitnesses != [] and obj_tf != []:
         fitnesses, obj_tf = zip(*sorted(zip(fitnesses, obj_tf),reverse=True))
