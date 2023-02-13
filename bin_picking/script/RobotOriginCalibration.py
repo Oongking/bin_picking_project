@@ -255,6 +255,17 @@ while not rospy.is_shutdown():
     key = getch.getch().lower()
     print("key : ",key)
 
+    if key == 'a': # Preview Alu Process
+        pcd, rgb_image, depth_image, pcd_env = cam.testMatrix()
+        while True:
+            cv2.imshow("Original Image",rgb_image)
+            if cv2.waitKey(1) & 0xFF==ord('q'):
+                cv2.destroyAllWindows()
+                break
+        # cv2.imwrite(f"/home/oongking/RobotArm_ws/src/bin_picking/script/data/calibration_alu.png",rgb_image)
+
+        o3d.visualization.draw_geometries([pcd])
+
     if key == 'p':
         print(":: Attach ARBoard Pose ::")
         setupArBoard()
