@@ -44,7 +44,7 @@ if camera == 'zivid':
     distortion_coefficients = zivid_distortion_coefficients
 
 Realcoor = o3d.geometry.TriangleMesh.create_coordinate_frame(0.1,(0,0,0))
-
+num = 9999
 while not rospy.is_shutdown():
 
     print("=================================================================================")
@@ -79,7 +79,7 @@ while not rospy.is_shutdown():
         #         break
 
         config = "test"
-        path = f"/home/oongking/RobotArm_ws/src/bin_picking/script/test/testMatrix/"
+        path = f"/home/oongking/RobotArm_ws/src/bin_picking/script/data/pro_calibration/"
         # print(f"depth type {depth_image.dtype}")
         # with numpy.printoptions(threshold=numpy.inf):
         #     print(f"depth : {depth_image}")
@@ -90,20 +90,27 @@ while not rospy.is_shutdown():
         # depth_image = np.asarray(depth_image,dtype=np.uint32)
         # print(f"u depth type {depth_image.dtype}")
         # with numpy.printoptions(threshold=numpy.inf):
-            # print(f"u depth : {depth_image}")
+        #     print(f"u depth : {depth_image}")
         # print(f"max f depth: {np.max(depth_image)}")
         # print(f"max n depth: {np.max(depth_image.astype(np.uint16))}")
-        # cv2.imwrite(f"{path}/{config}_rgb_img.png",rgb_image)
-        # cv2.imwrite(f"{path}/{config}_dep_img.png",depth_image*1000)
-        # o3d.io.write_point_cloud(f"{path}/{config}_pcd_ros.pcd", pcd)
-        # o3d.io.write_point_cloud(f"{path}/{config}_make_pcd.pcd", make_pcd)
 
+        color_path = "/home/oongking/RobotArm_ws/src/bin_picking/script/data/pro_calibration/color_img"+str(num).zfill(5)+".png"
+        depth_path = "/home/oongking/RobotArm_ws/src/bin_picking/script/data/pro_calibration/detph_img"+str(num).zfill(5)+".png"
+
+        cv2.imwrite(color_path,rgb_image)
+        np.save(depth_path, depth_image)
+        # cv2.imwrite(f"{path}/{config}_dep_img.png",depth_image*1000)
+        o3d.io.write_point_cloud(f"{path}/{config}_pcd_ros"+str(num).zfill(5)+".pcd", pcd)
+        o3d.io.write_point_cloud(f"{path}/{config}_make_pcd"+str(num).zfill(5)+".pcd", make_pcd)
+
+        T_depth_image = np.load(depth_path+'.npy')
         # T_depth_image = cv2.imread(f'{path}/{config}_dep_img.png',cv2.IMREAD_ANYDEPTH) 
-        # rgb_image = cv2.imread(f'{path}/{config}_rgb_img.png')
-        # print(f"T_depth_image type {T_depth_image.dtype}")
-        # pcd = buildPCD(rgb_image,T_depth_image, camera = 'zivid')
+        rgb_image = cv2.imread(color_path)
+        print(f"T_depth_image type {T_depth_image.dtype}")
+        pcd = buildPCD(rgb_image,T_depth_image, camera = 'zivid')
 
         o3d.visualization.draw_geometries([pcd,Realcoor])
+        num += 1
 
     if key == 'p':
         make_pcd,rgb_image, depth_image = cam.buildPCD()
