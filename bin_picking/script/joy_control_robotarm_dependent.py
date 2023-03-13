@@ -552,7 +552,7 @@ class ServoJoy:
             command.rACT = 1
             command.rGTO = 1
             command.rSP  = 125 # speed
-            command.rFR  = 5 # Force
+            command.rFR  = 255 # Force
 
             command.rPR = 250
 

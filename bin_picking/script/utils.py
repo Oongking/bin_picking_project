@@ -49,11 +49,17 @@ convert_rgbFloat_to_tuple = lambda rgb_float: convert_rgbUint32_to_tuple(
     int(cast(pointer(c_float(rgb_float)), POINTER(c_uint32)).contents.value)
 )
 
-zivid_matrix_coefficients = np.array([  [ 1782.476318359375,        0.0,        965.43896484375], 
-                                        [ 0.0,              1784.1812744140625, 590.5164184570312], 
-                                        [ 0,                        0,              1]])
-zivid_distortion_coefficients = np.array([[-0.08575305342674255, 0.1142171174287796, 0.00030625637737102807, -0.0007428471581079066, -0.048006460070610046]])
-zivid_intrinsic = o3d.camera.PinholeCameraIntrinsic(1944, 1200, 1782.476318359375, 1784.1812744140625, 965.43896484375, 590.5164184570312)
+# zivid_matrix_coefficients = np.array([  [ 1782.476318359375,        0.0,        965.43896484375], 
+#                                         [ 0.0,              1784.1812744140625, 590.5164184570312], 
+#                                         [ 0,                        0,              1]])
+# zivid_distortion_coefficients = np.array([[-0.08575305342674255, 0.1142171174287796, 0.00030625637737102807, -0.0007428471581079066, -0.048006460070610046]])
+# zivid_intrinsic = o3d.camera.PinholeCameraIntrinsic(1944, 1200, 1782.476318359375, 1784.1812744140625, 965.43896484375, 590.5164184570312)
+
+zivid_matrix_coefficients = np.array([[1775.45651052, 0.0, 971.44183783],
+                                [0.0, 1776.00990344, 593.88802681],
+                                [ 0.0, 0.0, 1.0 ]])
+zivid_distortion_coefficients = np.array([[-0.08439001,  0.05578754,  0.00092648,  0.00037382,  0.11682607]])
+zivid_intrinsic = o3d.camera.PinholeCameraIntrinsic(1944, 1200, 1775.45651052, 1776.00990344, 971.44183783, 593.88802681)
 
 
 # azure calibraby chessboard
@@ -77,7 +83,8 @@ arucoParams = cv2.aruco.DetectorParameters_create()
 arucoDictA3 = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_5X5_250)
 
 
-zivid_boardA3 = cv2.aruco.GridBoard_create(14, 10, 0.02155, 0.0058, arucoDictA3)
+# zivid_boardA3 = cv2.aruco.GridBoard_create(14, 10, 0.02155, 0.0058, arucoDictA3)
+zivid_boardA3 = cv2.aruco.GridBoard_create(14, 10, 0.0216, 0.0058, arucoDictA3)
 
 # For Azure
 azure_percentage_offset = 0.03
@@ -91,9 +98,10 @@ azure_boardA3 = cv2.aruco.GridBoard_create(14, 10, azure_ARsize, azure_ARgabsize
 #A3
 A3_azure_offset_x=0.5*((azure_ARsize*14)+(azure_ARgabsize*(14-1)))
 A3_azure_offset_y=0.5*((azure_ARsize*10)+(azure_ARgabsize*(10-1)))
-A3_zivid_offset_x=0.5*((0.02155*14)+(0.0058*(14-1)))
-A3_zivid_offset_y=0.5*((0.02155*10)+(0.0058*(10-1)))
-
+# A3_zivid_offset_x=0.5*((0.02155*14)+(0.0058*(14-1)))
+# A3_zivid_offset_y=0.5*((0.02155*10)+(0.0058*(10-1)))
+A3_zivid_offset_x=0.5*((0.0216*14)+(0.0058*(14-1)))
+A3_zivid_offset_y=0.5*((0.0216*10)+(0.0058*(10-1)))
 bridge=CvBridge()
 
 def Rx(theta):

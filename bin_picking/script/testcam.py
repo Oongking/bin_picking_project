@@ -113,14 +113,13 @@ while not rospy.is_shutdown():
         num += 1
 
     if key == 'p':
-        make_pcd,rgb_image, depth_image = cam.buildPCD()
+        pcd,rgb_image, depth_image,make_pcd = cam.testMatrix()
         
         o3d.visualization.draw_geometries([make_pcd,Realcoor])
         make_pcd.paint_uniform_color([1, 0.706, 0])
-        pcd = cam.get_pcd()
         o3d.visualization.draw_geometries([make_pcd,pcd,Realcoor])
-        print("make_pcd : ",make_pcd)
-        print("pcd : ",pcd)
+        # print("make_pcd : ",make_pcd)
+        # print("pcd : ",pcd)
 
     
     if key == 'e':

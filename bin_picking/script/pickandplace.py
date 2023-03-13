@@ -138,7 +138,7 @@ class RobotPickPlace:
         self.place_order = 0
     
     def set_cam_box(self,ws_tf):
-        self.cam_box = fixbox(ws_tf[:3, :3],ws_tf[:3,3],0, x = 0.3, y = 0.3, z = 0.1)
+        self.cam_box = fixbox(ws_tf[:3, :3],ws_tf[:3,3],-0.001, x = 0.3, y = 0.3, z = 0.1)
 
     def reload(self):
         if cam_type == 'sim':
@@ -570,6 +570,8 @@ while not rospy.is_shutdown():
 
         o3d.visualization.draw_geometries([RobotBaseCoor,Realcoor,pickplace.cam_box])
         o3d.visualization.draw_geometries([pcd,RobotBaseCoor,Realcoor,pickplace.cam_box])
+        crop_pcd = pcd.crop(pickplace.cam_box)
+        o3d.visualization.draw_geometries([crop_pcd,RobotBaseCoor,Realcoor,pickplace.cam_box])
 
     if key == 'u': # Preview Alu Process
         Realcoor = o3d.geometry.TriangleMesh.create_coordinate_frame(0.1,(0,0,0))
